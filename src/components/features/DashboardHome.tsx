@@ -22,9 +22,16 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   graduation: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
 }
 
+interface LeaderboardCategory {
+  label: string
+  emoji: string
+  student: { id: string; full_name: string; nickname: string | null; avatar_url: string | null } | null
+  score: number
+}
+
 interface Props {
   stats: { students: number; messages: number; gallery: number }
-  topStudents: Partial<Student>[]
+  leaderboardCategories: LeaderboardCategory[]
   announcements: Partial<Announcement>[]
   upcomingEvents: Partial<Event>[]
   birthdaysToday: { full_name: string; nickname: string | null }[]
@@ -45,7 +52,7 @@ function useCountUp(target: number, duration = 2000) {
   return val
 }
 
-export function DashboardHome({ stats, topStudents, announcements, upcomingEvents, birthdaysToday }: Props) {
+export function DashboardHome({ stats, leaderboardCategories, announcements, upcomingEvents, birthdaysToday }: Props) {
   const fact = getDailyMarineFact()
   const today = new Date()
   const dayIndex = Math.floor(today.getTime() / 86400000) % QUOTES.length
@@ -55,7 +62,7 @@ export function DashboardHome({ stats, topStudents, announcements, upcomingEvent
   const mCount = useCountUp(stats.messages, 2500)
   const gCount = useCountUp(stats.gallery, 1800)
 
-  const rankColors = ['text-yellow-400', 'text-gray-300', 'text-orange-400', 'text-ocean-secondary', 'text-ocean-secondary']
+  const rankMedals = ['🥇', '🥈', '🥉']
 
   return (
     <div className="space-y-8">
@@ -114,27 +121,6 @@ export function DashboardHome({ stats, topStudents, announcements, upcomingEvent
         </motion.div>
       )}
 
-      {/* Announcements */}
-      {announcements.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-          <p className="section-eyebrow mb-4">📢 Announcements</p>
-          <div className="space-y-3">
-            {announcements.map(a => (
-              <div key={a.id} className="glass-card p-5">
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <h3 className="font-syne font-bold text-base">{a.title}</h3>
-                  {a.is_pinned && (
-                    <span className="badge text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 flex-shrink-0">📌 Pinned</span>
-                  )}
-                </div>
-                <p className="text-sm text-ocean-secondary leading-relaxed">{a.content}</p>
-                <p className="text-xs text-ocean-muted mt-3">{a.created_at ? format(new Date(a.created_at), 'MMM d, yyyy') : ''}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
       {/* Quote + Fact */}
       <div className="grid md:grid-cols-2 gap-4">
         <motion.div
@@ -161,23 +147,46 @@ export function DashboardHome({ stats, topStudents, announcements, upcomingEvent
       </div>
 
       {/* Leaderboard */}
-      {topStudents.length > 0 && (
+      {leaderboardCategories.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <p className="section-eyebrow mb-2">🏆 Class Leaderboard</p>
           <h2 className="section-heading mb-1">Top of the Tank</h2>
           <p className="section-sub mb-5">Who's making the most waves?</p>
           <div className="space-y-3">
-            {topStudents.map((s, i) => (
-              <div key={s.id} className="glass-card flex items-center gap-4 p-4 hover:border-cyan-400/30 transition-all">
-                <span className={`font-syne font-extrabold text-xl min-w-[28px] ${rankColors[i]}`}>
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <Avatar name={s.full_name ?? ''} src={s.avatar_url} size="md" />
+            {leaderboardCategories.map((cat, i) => (
+              <div key={i} className="glass-card flex items-center gap-4 p-4 hover:border-cyan-400/30 transition-all">
+                <span className="text-2xl min-w-[32px] text-center">{rankMedals[i]}</span>
+                {cat.student ? (
+                  <Avatar name={cat.student.full_name} src={cat.student.avatar_url} size="md" />
+                ) : (
+                  <div className="w-10 h-10 rounded-2xl bg-glass flex items-center justify-center text-ocean-muted text-xs">—</div>
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{s.full_name}</p>
-                  <p className="text-xs text-ocean-muted">{s.nickname ?? 'No nickname yet'}</p>
+                  <p className="font-semibold text-sm truncate">{cat.student?.full_name ?? 'No one yet'}</p>
+                  <p className="text-xs text-ocean-muted">{cat.emoji} {cat.label}</p>
                 </div>
-                <span className="font-syne font-bold text-lg gradient-text-static">{(s.likes_count ?? 0).toLocaleString()}</span>
+                <span className="font-syne font-bold text-lg gradient-text-static">{cat.score.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Announcements */}
+      {announcements.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+          <p className="section-eyebrow mb-4">📢 Announcements</p>
+          <div className="space-y-3">
+            {announcements.map(a => (
+              <div key={a.id} className="glass-card p-5">
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <h3 className="font-syne font-bold text-base">{a.title}</h3>
+                  {a.is_pinned && (
+                    <span className="badge text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 flex-shrink-0">📌 Pinned</span>
+                  )}
+                </div>
+                <p className="text-sm text-ocean-secondary leading-relaxed">{a.content}</p>
+                <p className="text-xs text-ocean-muted mt-3">{a.created_at ? format(new Date(a.created_at), 'MMM d, yyyy') : ''}</p>
               </div>
             ))}
           </div>

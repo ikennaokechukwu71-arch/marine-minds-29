@@ -1,54 +1,106 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server'
-import { AdminClient } from '@/components/features/AdminClient'
+import { DashboardHome } from '@/components/features/DashboardHome'
 
-export default async function AdminPage() {
+export default async function DashboardPage() {
   const supabase = createClient() as any
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
-
-  const { data: studentProfile } = await supabase
-    .from('students')
-    .select('is_admin')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!studentProfile?.is_admin) redirect('/dashboard')
-
-  const admin = createAdminClient() as any
 
   const [
-    { data: pendingMessages },
-    { data: flaggedMessages },
-    { count: totalStudents },
-    { count: totalMessages },
-    { data: pendingGallery },
-    { data: recentSignups },
+    { count: studentCount },
+    { count: messageCount },
+    { count: galleryCount },
+    { data: mostLiked },
+    { data: mostMentioned },
+    { data: topGallery },
     { data: announcements },
+    { data: upcomingEvents },
+    { data: todayBirthdays },
   ] = await Promise.all([
-    admin.from('anonymous_messages').select('*').eq('is_approved', false).eq('is_flagged', false).order('created_at', { ascending: false }),
-    admin.from('anonymous_messages').select('*').eq('is_flagged', true),
-    admin.from('students').select('*', { count: 'exact', head: true }),
-    admin.from('anonymous_messages').select('*', { count: 'exact', head: true }),
-    admin.from('gallery_uploads').select('*').eq('is_approved', false).order('created_at', { ascending: false }),
-    admin.from('students').select('full_name, email, created_at, user_id').order('created_at', { ascending: false }).limit(10),
-    admin.from('announcements').select('*').order('created_at', { ascending: false }),
+    supabase.from('students').select('*', { count: 'exact', head: true }),
+    supabase.from('anonymous_messages').select('*', { count: 'exact', head: true }).eq('is_approved', true),
+    supabase.from('gallery_uploads').select('*', { count: 'exact', head: true }).eq('is_approved', true),
+    supabase
+      .from('students')
+      .select('id, full_name, nickname, avatar_url, likes_count')
+      .order('likes_count', { ascending: false })
+      .limit(1)
+      .single(),
+    supabase
+      .from('students')
+      .select('id, full_name, nickname, avatar_url, mentions_count')
+      .order('mentions_count', { ascending: false })
+      .limit(1)
+      .single(),
+    supabase
+      .from('gallery_uploads')
+      .select('uploaded_by, students(id, full_name, nickname, avatar_url)')
+      .eq('is_approved', true),
+    supabase
+      .from('announcements')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(3),
+    supabase
+      .from('events')
+      .select('*')
+      .gte('event_date', new Date().toISOString())
+      .order('event_date', { ascending: true })
+      .limit(3),
+    supabase
+      .from('students')
+      .select('full_name, nickname, birthday')
+      .not('birthday', 'is', null),
   ])
 
+  // Count gallery uploads per student
+  const galleryCounts: Record<string, { count: number; student: any }> = {}
+  for (const row of topGallery ?? []) {
+    if (!row.uploaded_by) continue
+    if (!galleryCounts[row.uploaded_by]) {
+      galleryCounts[row.uploaded_by] = { count: 0, student: row.students }
+    }
+    galleryCounts[row.uploaded_by].count++
+  }
+  const topUploader = Object.values(galleryCounts).sort((a, b) => b.count - a.count)[0]
+
+  const categories = [
+    {
+      label: 'Most liked profile',
+      emoji: '❤️',
+      student: mostLiked ?? null,
+      score: mostLiked?.likes_count ?? 0,
+    },
+    {
+      label: 'Most anonymous mentions',
+      emoji: '🌑',
+      student: mostMentioned ?? null,
+      score: mostMentioned?.mentions_count ?? 0,
+    },
+    {
+      label: 'Top gallery uploads',
+      emoji: '📸',
+      student: topUploader?.student ?? null,
+      score: topUploader?.count ?? 0,
+    },
+  ]
+
+  const birthdaysToday = (todayBirthdays ?? []).filter(s => {
+    if (!s.birthday) return false
+    const b = new Date(s.birthday)
+    const today = new Date()
+    return b.getMonth() === today.getMonth() && b.getDate() === today.getDate()
+  })
+
   return (
-    <AdminClient
-      pendingMessages={pendingMessages ?? []}
-      flaggedMessages={flaggedMessages ?? []}
-      pendingGallery={pendingGallery ?? []}
-      recentSignups={recentSignups ?? []}
-      announcements={announcements ?? []}
+    <DashboardHome
       stats={{
-        totalStudents: totalStudents ?? 0,
-        totalMessages: totalMessages ?? 0,
-        pendingCount: pendingMessages?.length ?? 0,
-        flaggedCount: flaggedMessages?.length ?? 0,
+        students: studentCount ?? 0,
+        messages: messageCount ?? 0,
+        gallery: galleryCount ?? 0,
       }}
+      leaderboardCategories={categories}
+      announcements={announcements ?? []}
+      upcomingEvents={upcomingEvents ?? []}
+      birthdaysToday={birthdaysToday}
     />
   )
 }
