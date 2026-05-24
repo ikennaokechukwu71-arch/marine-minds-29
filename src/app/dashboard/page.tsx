@@ -83,7 +83,7 @@ export default async function DashboardPage() {
     },
   ]
 
-  const birthdaysToday = (todayBirthdays ?? []).filter(s => {
+  const birthdaysToday = (todayBirthdays ?? []).filter((s: any) => {
     if (!s.birthday) return false
     const b = new Date(s.birthday)
     const today = new Date()
