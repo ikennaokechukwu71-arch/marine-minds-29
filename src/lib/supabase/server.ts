@@ -1,11 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import type { Database } from '@/types/database'
 
 export function createClient() {
   const cookieStore = cookies()
 
-  return createServerClient<Database>(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -16,7 +16,7 @@ export function createClient() {
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options as Record<string, unknown>)
             )
           } catch {
             // setAll called from a Server Component — can be ignored
@@ -29,8 +29,7 @@ export function createClient() {
 
 /** Admin client — bypasses RLS. Server-only. */
 export function createAdminClient() {
-  const { createClient: createSupabaseClient } = require('@supabase/supabase-js')
-  return createSupabaseClient<Database>(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
