@@ -1,3 +1,17 @@
+@font-face {
+  font-family: 'NeueMontreal';
+  src: url('/fonts/NeueMontreal-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'NeueMontreal';
+  src: url('/fonts/NeueMontreal-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -29,7 +43,7 @@
   body {
     background: var(--ocean-deep);
     color: var(--text-primary);
-    font-family: var(--font-dm), 'DM Sans', sans-serif;
+    font-family: 'NeueMontreal', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -96,7 +110,7 @@
     border: none;
     position: relative;
     overflow: hidden;
-    font-family: var(--font-dm);
+    font-family: 'NeueMontreal', sans-serif;
   }
   .btn-primary:hover {
     transform: translateY(-2px);
@@ -112,7 +126,7 @@
     border: 1px solid var(--glass-border);
     color: var(--text-primary);
     backdrop-filter: blur(20px);
-    font-family: var(--font-dm);
+    font-family: 'NeueMontreal', sans-serif;
   }
   .btn-glass:hover {
     background: var(--glass-hover);
@@ -129,6 +143,7 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
+    font-family: 'NeueMontreal', sans-serif;
   }
   .btn-danger:hover { background: rgba(255,70,70,0.25); }
 
@@ -141,6 +156,7 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
+    font-family: 'NeueMontreal', sans-serif;
   }
   .btn-success:hover { background: rgba(0,255,136,0.25); }
 
@@ -153,7 +169,7 @@
     border-radius: 12px;
     color: var(--text-primary);
     font-size: 14px;
-    font-family: var(--font-dm);
+    font-family: 'NeueMontreal', sans-serif;
     outline: none;
     transition: border-color 0.2s;
     backdrop-filter: blur(10px);
@@ -169,20 +185,21 @@
     text-transform: uppercase;
     letter-spacing: 3px;
     margin-bottom: 10px;
-    font-family: var(--font-syne);
+    font-family: 'NeueMontreal', sans-serif;
   }
   .section-heading {
     font-size: clamp(28px, 4vw, 42px);
     font-weight: 800;
     line-height: 1.1;
     margin-bottom: 8px;
-    font-family: var(--font-syne);
+    font-family: 'NeueMontreal', sans-serif;
   }
   .section-sub {
     font-size: 16px;
     color: var(--text-secondary);
     line-height: 1.6;
     max-width: 480px;
+    font-family: 'NeueMontreal', sans-serif;
   }
 
   /* ─── Online Dot ────────────────────────────────────── */
@@ -215,6 +232,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    font-family: 'NeueMontreal', sans-serif;
   }
   .reaction-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); }
   .reaction-btn.active {
@@ -233,6 +251,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-family: 'NeueMontreal', sans-serif;
   }
 
   /* ─── Ocean Glow ─────────────────────────────────────── */
@@ -247,13 +266,13 @@
 }
 
 @layer utilities {
-  .font-syne { font-family: var(--font-syne), 'Syne', sans-serif; }
-  .font-dm   { font-family: var(--font-dm), 'DM Sans', sans-serif; }
+  .font-syne { font-family: 'NeueMontreal', sans-serif; }
+  .font-dm   { font-family: 'NeueMontreal', sans-serif; }
 
-  .text-ocean-muted   { color: var(--text-muted); }
+  .text-ocean-muted     { color: var(--text-muted); }
   .text-ocean-secondary { color: var(--text-secondary); }
-  .bg-ocean-glass     { background: var(--glass); }
-  .border-glass       { border-color: var(--glass-border); }
+  .bg-ocean-glass       { background: var(--glass); }
+  .border-glass         { border-color: var(--glass-border); }
 }
 
 /* ─── Keyframes ─────────────────────────────────────────── */
