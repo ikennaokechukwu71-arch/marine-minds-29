@@ -11,7 +11,7 @@ export default async function AdminPage() {
     .from('students')
     .select('is_admin')
     .eq('user_id', user.id)
-    .single()
+    .single() as { data: { is_admin: boolean } | null, error: unknown }
 
   if (!studentProfile?.is_admin) redirect('/dashboard')
 
