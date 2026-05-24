@@ -8,7 +8,9 @@ export default async function DashboardPage() {
     { count: studentCount },
     { count: messageCount },
     { count: galleryCount },
-    { data: topStudents },
+    { data: mostLiked },
+    { data: mostMentioned },
+    { data: topGallery },
     { data: announcements },
     { data: upcomingEvents },
     { data: todayBirthdays },
@@ -18,32 +20,67 @@ export default async function DashboardPage() {
     supabase.from('gallery_uploads').select('*', { count: 'exact', head: true }).eq('is_approved', true),
     supabase
       .from('students')
-      .select('id, full_name, nickname, avatar_url, likes_count, mentions_count')
+      .select('id, full_name, nickname, avatar_url, likes_count')
       .order('likes_count', { ascending: false })
-      .limit(5) as unknown as Promise<{ data: { id: string; full_name: string; nickname: string | null; avatar_url: string | null; likes_count: number; mentions_count: number }[] | null }>,
+      .limit(1)
+      .single(),
+    supabase
+      .from('students')
+      .select('id, full_name, nickname, avatar_url, mentions_count')
+      .order('mentions_count', { ascending: false })
+      .limit(1)
+      .single(),
+    supabase
+      .from('gallery_uploads')
+      .select('uploaded_by, students(id, full_name, nickname, avatar_url)')
+      .eq('is_approved', true),
     supabase
       .from('announcements')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(3) as unknown as Promise<{ data: { id: string; title: string; content: string; created_at: string }[] | null }>,
+      .limit(3),
     supabase
       .from('events')
       .select('*')
       .gte('event_date', new Date().toISOString())
       .order('event_date', { ascending: true })
-      .limit(3) as unknown as Promise<{ data: { id: string; title: string; event_date: string; location: string | null }[] | null }>,
+      .limit(3),
     supabase
       .from('students')
       .select('full_name, nickname, birthday')
-      .not('birthday', 'is', null) as unknown as Promise<{ data: { full_name: string; nickname: string | null; birthday: string }[] | null }>,
-  ]) as unknown as [
-    { count: number | null },
-    { count: number | null },
-    { count: number | null },
-    { data: { id: string; full_name: string; nickname: string | null; avatar_url: string | null; likes_count: number; mentions_count: number }[] | null },
-    { data: { id: string; title: string; content: string; created_at: string }[] | null },
-    { data: { id: string; title: string; event_date: string; location: string | null }[] | null },
-    { data: { full_name: string; nickname: string | null; birthday: string }[] | null },
+      .not('birthday', 'is', null),
+  ])
+
+  // Count gallery uploads per student
+  const galleryCounts: Record<string, { count: number; student: any }> = {}
+  for (const row of topGallery ?? []) {
+    if (!row.uploaded_by) continue
+    if (!galleryCounts[row.uploaded_by]) {
+      galleryCounts[row.uploaded_by] = { count: 0, student: row.students }
+    }
+    galleryCounts[row.uploaded_by].count++
+  }
+  const topUploader = Object.values(galleryCounts).sort((a, b) => b.count - a.count)[0]
+
+  const categories = [
+    {
+      label: 'Most liked profile',
+      emoji: '❤️',
+      student: mostLiked ?? null,
+      score: mostLiked?.likes_count ?? 0,
+    },
+    {
+      label: 'Most anonymous mentions',
+      emoji: '🌑',
+      student: mostMentioned ?? null,
+      score: mostMentioned?.mentions_count ?? 0,
+    },
+    {
+      label: 'Top gallery uploads',
+      emoji: '📸',
+      student: topUploader?.student ?? null,
+      score: topUploader?.count ?? 0,
+    },
   ]
 
   const birthdaysToday = (todayBirthdays ?? []).filter(s => {
@@ -60,7 +97,7 @@ export default async function DashboardPage() {
         messages: messageCount ?? 0,
         gallery: galleryCount ?? 0,
       }}
-      topStudents={topStudents ?? []}
+      leaderboardCategories={categories}
       announcements={announcements ?? []}
       upcomingEvents={upcomingEvents ?? []}
       birthdaysToday={birthdaysToday}
