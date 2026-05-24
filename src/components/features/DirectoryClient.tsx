@@ -3,8 +3,10 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import Image from 'next/image'
 import { Avatar } from '@/components/ui/Avatar'
 import { createClient } from '@/lib/supabase/client'
+import { getAvatarGradient, getInitials } from '@/lib/utils'
 import type { Student } from '@/types/database'
 
 interface Props {
@@ -97,7 +99,6 @@ export function DirectoryClient({ students, currentUserId }: Props) {
         <p className="section-eyebrow">Marine Minds 29</p>
         <h1 className="section-heading">Meet the Crew 🌊</h1>
         <p className="section-sub mb-6">Your legendary classmates, in all their aquatic glory.</p>
-
         <div className="flex gap-3 flex-wrap">
           <input
             type="text"
@@ -110,28 +111,53 @@ export function DirectoryClient({ students, currentUserId }: Props) {
         </div>
       </motion.div>
 
-      {/* Count */}
       <p className="text-sm text-ocean-muted">{filtered.length} of {students.length} crew members</p>
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {filtered.map((s, i) => (
-          <motion.div
-            key={s.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-            className="glass-card p-5 text-center cursor-pointer"
-            onClick={() => openProfile(s)}
-          >
-            <Avatar name={s.full_name} src={s.avatar_url} size="lg" className="mx-auto mb-3" />
-            <p className="font-syne font-bold text-sm mb-1 truncate">{s.full_name}</p>
-            {s.nickname && <p className="text-xs gradient-text-static mb-2">{s.nickname}</p>}
-            <p className="text-xs text-ocean-muted line-clamp-2 leading-relaxed">
-              {s.bio ?? 'No bio yet.'}
-            </p>
-          </motion.div>
-        ))}
+      {/* Portrait Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {filtered.map((s, i) => {
+          const gradient = getAvatarGradient(s.full_name)
+          const initials = getInitials(s.full_name)
+          return (
+            <motion.div
+              key={s.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="group cursor-pointer rounded-2xl overflow-hidden relative"
+              style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(6,32,64,0.4)' }}
+              onClick={() => openProfile(s)}
+            >
+              {/* Portrait Image Area */}
+              <div className="relative w-full aspect-[3/4] overflow-hidden">
+                {s.avatar_url ? (
+                  <Image
+                    src={s.avatar_url}
+                    alt={s.full_name}
+                    fill
+                    className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                    sizes="200px"
+                  />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient}`}>
+                    <span className="font-syne font-extrabold text-3xl text-ocean-deep opacity-60">{initials}</span>
+                  </div>
+                )}
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep via-ocean-deep/20 to-transparent" />
+              </div>
+
+              {/* Name area */}
+              <div className="p-3">
+                <p className="font-syne font-bold text-sm truncate">{s.full_name}</p>
+                {s.nickname
+                  ? <p className="text-xs gradient-text-static truncate">{s.nickname}</p>
+                  : <p className="text-xs text-ocean-muted truncate">{s.bio ?? 'No bio yet.'}</p>
+                }
+              </div>
+            </motion.div>
+          )
+        })}
       </div>
 
       {/* Profile Modal */}
@@ -142,7 +168,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(2,11,24,0.85)', backdropFilter: 'blur(12px)' }}
+            style={{ background: 'rgba(2,11,24,0.85)', backdropFilter: 'blur(16px)' }}
             onClick={e => { if (e.target === e.currentTarget) setSelected(null) }}
           >
             <motion.div
@@ -150,65 +176,91 @@ export function DirectoryClient({ students, currentUserId }: Props) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="glass-card p-8 w-full max-w-lg relative"
-              style={{ maxHeight: '90vh', overflowY: 'auto' }}
+              className="w-full max-w-sm relative overflow-hidden rounded-3xl"
+              style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(6,22,50,0.97)', maxHeight: '90vh', overflowY: 'auto' }}
             >
               <button
-                className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-ocean-muted hover:text-white transition-colors"
-                style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)' }}
+                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)' }}
                 onClick={() => setSelected(null)}
               >✕</button>
 
               {!editing ? (
                 <>
-                  <Avatar name={selected.full_name} src={selected.avatar_url} size="xl"
-                    className="mx-auto mb-4 ring-4 ring-cyan-400/30 shadow-[0_0_30px_rgba(0,212,255,0.3)]" />
-                  <h2 className="font-syne text-2xl font-extrabold text-center mb-1">{selected.full_name}</h2>
-                  {selected.nickname && <p className="text-center gradient-text-static font-semibold mb-4">✦ {selected.nickname}</p>}
-                  {selected.favorite_quote && (
-                    <blockquote className="text-sm text-ocean-secondary italic border-l-2 border-cyan-400/50 pl-4 mb-4 leading-relaxed">
-                      "{selected.favorite_quote}"
-                    </blockquote>
-                  )}
-                  {selected.bio && <p className="text-sm text-ocean-secondary leading-relaxed mb-5">{selected.bio}</p>}
-
-                  <div className="flex gap-2 justify-center flex-wrap mb-4">
-                    {selected.instagram_url && <a href={selected.instagram_url} target="_blank" className="btn-glass text-xs py-2 px-3">📸 Instagram</a>}
-                    {selected.linkedin_url && <a href={selected.linkedin_url} target="_blank" className="btn-glass text-xs py-2 px-3">💼 LinkedIn</a>}
-                    {selected.twitter_url && <a href={selected.twitter_url} target="_blank" className="btn-glass text-xs py-2 px-3">🐦 Twitter</a>}
+                  {/* Full portrait image */}
+                  <div className="relative w-full aspect-[4/5]">
+                    {selected.avatar_url ? (
+                      <Image
+                        src={selected.avatar_url}
+                        alt={selected.full_name}
+                        fill
+                        className="object-cover object-top"
+                        sizes="400px"
+                      />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${getAvatarGradient(selected.full_name)}`}>
+                        <span className="font-syne font-extrabold text-6xl text-ocean-deep opacity-40">
+                          {getInitials(selected.full_name)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[rgba(6,22,50,0.97)] via-[rgba(6,22,50,0.2)] to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <h2 className="font-syne text-2xl font-extrabold">{selected.full_name}</h2>
+                      {selected.nickname && <p className="gradient-text-static font-semibold text-sm">✦ {selected.nickname}</p>}
+                    </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    {!isOwnProfile && (
-                      <button onClick={() => likeProfile(selected.id)} className="btn-glass flex-1 text-sm">❤️ Like</button>
+                  {/* Details */}
+                  <div className="p-6 space-y-4">
+                    {selected.favorite_quote && (
+                      <blockquote className="text-sm text-ocean-secondary italic border-l-2 border-cyan-400/50 pl-4 leading-relaxed">
+                        "{selected.favorite_quote}"
+                      </blockquote>
                     )}
-                    {isOwnProfile && (
-                      <button onClick={() => setEditing(true)} className="btn-primary flex-1 text-sm">✏️ Edit My Profile</button>
+                    {selected.bio && (
+                      <p className="text-sm text-ocean-secondary leading-relaxed">{selected.bio}</p>
                     )}
+                    <div className="flex gap-2 flex-wrap">
+                      {selected.instagram_url && <a href={selected.instagram_url} target="_blank" className="btn-glass text-xs py-2 px-3">📸 Instagram</a>}
+                      {selected.linkedin_url && <a href={selected.linkedin_url} target="_blank" className="btn-glass text-xs py-2 px-3">💼 LinkedIn</a>}
+                      {selected.twitter_url && <a href={selected.twitter_url} target="_blank" className="btn-glass text-xs py-2 px-3">🐦 Twitter</a>}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      {!isOwnProfile && (
+                        <button onClick={() => likeProfile(selected.id)} className="btn-glass flex-1 text-sm">❤️ Like</button>
+                      )}
+                      {isOwnProfile && (
+                        <button onClick={() => setEditing(true)} className="btn-primary flex-1 text-sm">✏️ Edit My Profile</button>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
-                <>
+                <div className="p-8">
                   <h2 className="font-syne text-xl font-bold text-center mb-5">Edit Your Profile</h2>
 
                   {/* Avatar Upload */}
                   <div className="flex flex-col items-center mb-6">
-                    <div className="relative group cursor-pointer" onClick={() => avatarRef.current?.click()}>
-                      <Avatar
-                        name={selected.full_name}
-                        src={avatarPreview ?? selected.avatar_url}
-                        size="xl"
-                        className="ring-4 ring-cyan-400/30"
-                      />
-                      <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        {uploadingAvatar ? (
-                          <span className="text-white text-xs">Uploading...</span>
-                        ) : (
-                          <span className="text-white text-xs">📷 Change</span>
-                        )}
+                    <div className="relative group cursor-pointer rounded-2xl overflow-hidden w-32 h-32" onClick={() => avatarRef.current?.click()}>
+                      {(avatarPreview ?? selected.avatar_url) ? (
+                        <Image
+                          src={avatarPreview ?? selected.avatar_url ?? ''}
+                          alt={selected.full_name}
+                          fill
+                          className="object-cover object-top"
+                          sizes="128px"
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${getAvatarGradient(selected.full_name)}`}>
+                          <span className="font-syne font-extrabold text-3xl text-ocean-deep opacity-60">{getInitials(selected.full_name)}</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-white text-xs">{uploadingAvatar ? 'Uploading...' : '📷 Change'}</span>
                       </div>
                     </div>
-                    <p className="text-xs text-ocean-muted mt-2">Click photo to change · Max 2MB</p>
+                    <p className="text-xs text-ocean-muted mt-2">Click to change · Max 2MB</p>
                     <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                   </div>
 
@@ -238,7 +290,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
                       {saving ? 'Saving...' : 'Save Profile'}
                     </button>
                   </div>
-                </>
+                </div>
               )}
             </motion.div>
           </motion.div>
