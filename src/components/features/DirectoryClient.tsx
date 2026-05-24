@@ -150,7 +150,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="glass-card p-8 w-full max-w-md relative"
+              className="glass-card p-8 w-full max-w-lg relative"
               style={{ maxHeight: '90vh', overflowY: 'auto' }}
             >
               <button

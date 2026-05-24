@@ -13,7 +13,7 @@ const sizes = {
   sm: 'w-8 h-8 text-xs',
   md: 'w-10 h-10 text-sm',
   lg: 'w-16 h-16 text-xl',
-  xl: 'w-24 h-24 text-3xl',
+  xl: 'w-36 h-36 text-3xl',
 }
 
 export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
@@ -23,8 +23,8 @@ export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
 
   if (src) {
     return (
-      <div className={cn('relative rounded-full overflow-hidden flex-shrink-0', sizeClass, className)}>
-        <Image src={src} alt={name} fill className="object-cover" sizes="96px" />
+      <div className={cn('relative rounded-2xl overflow-hidden flex-shrink-0', sizeClass, className)}>
+        <Image src={src} alt={name} fill className="object-cover object-top" sizes="144px" />
       </div>
     )
   }
@@ -32,7 +32,7 @@ export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
   return (
     <div
       className={cn(
-        'rounded-full flex items-center justify-center flex-shrink-0 font-syne font-extrabold flex-shrink-0',
+        'rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-extrabold',
         `bg-gradient-to-br ${gradient}`,
         'text-ocean-deep',
         sizeClass,
