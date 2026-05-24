@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function DirectoryClient({ students, currentUserId }: Props) {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Student | null>(null)
   const [editing, setEditing] = useState(false)

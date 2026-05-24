@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function PollsClient({ polls: initial, userVotes: initialVotes, userId }: Props) {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [polls, setPolls] = useState(initial)
   const [userVotes, setUserVotes] = useState(initialVotes)
   const [voting, setVoting] = useState<string | null>(null)

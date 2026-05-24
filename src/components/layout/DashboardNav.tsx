@@ -26,7 +26,7 @@ interface Props {
 export function DashboardNav({ user, student }: Props) {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [onlineCount, setOnlineCount] = useState(23)
   const [profileOpen, setProfileOpen] = useState(false)
 

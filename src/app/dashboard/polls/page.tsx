@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PollsClient } from '@/components/features/PollsClient'
 
 export default async function PollsPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: polls } = await supabase

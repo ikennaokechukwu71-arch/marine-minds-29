@@ -34,7 +34,7 @@ interface Props {
 }
 
 export function GalleryClient({ uploads, userId }: Props) {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [items, setItems] = useState(uploads)
   const [filter, setFilter] = useState<Category | 'all'>('all')
   const [lightbox, setLightbox] = useState<Upload | null>(null)

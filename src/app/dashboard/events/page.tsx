@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { EventsClient } from '@/components/features/EventsClient'
 
 export default async function EventsPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data: upcoming } = await supabase
     .from('events')

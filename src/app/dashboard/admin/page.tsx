@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AdminClient } from '@/components/features/AdminClient'
 
 export default async function AdminPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 

@@ -10,7 +10,7 @@ import { OceanBackground } from '@/components/ui/OceanBackground'
 
 export default function SignupPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '' })
   const [loading, setLoading] = useState(false)
 

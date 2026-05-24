@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardHome } from '@/components/features/DashboardHome'
 
 export default async function DashboardPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const [
     { count: studentCount },

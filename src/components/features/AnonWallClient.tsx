@@ -27,7 +27,7 @@ interface Props {
 }
 
 export function AnonWallClient({ messages: initial, featuredMessage, userReactions, userId }: Props) {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [messages, setMessages] = useState(initial)
   const [reactions, setReactions] = useState(userReactions)
   const [text, setText] = useState('')

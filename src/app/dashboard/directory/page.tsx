@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DirectoryClient } from '@/components/features/DirectoryClient'
 
 export default async function DirectoryPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data: students } = await supabase
     .from('students')

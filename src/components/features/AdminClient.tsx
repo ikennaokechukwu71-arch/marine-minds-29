@@ -25,7 +25,7 @@ interface Props {
 type Tab = 'overview' | 'messages' | 'gallery' | 'signups'
 
 export function AdminClient({ pendingMessages: initPending, flaggedMessages: initFlagged, pendingGallery: initGallery, recentSignups, stats }: Props) {
-  const supabase = createClient() as any
+  const supabase = createClient() as any as any
   const [tab, setTab] = useState<Tab>('overview')
   const [pending, setPending] = useState(initPending)
   const [flagged, setFlagged] = useState(initFlagged)

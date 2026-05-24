@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { GalleryClient } from '@/components/features/GalleryClient'
 
 export default async function GalleryPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: uploads } = await supabase

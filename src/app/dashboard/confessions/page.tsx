@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AnonWallClient } from '@/components/features/AnonWallClient'
 
 export default async function ConfessionsPage() {
-  const supabase = createClient()
+  const supabase = createClient() as any
 
   const { data: messages } = await supabase
     .from('anonymous_messages')

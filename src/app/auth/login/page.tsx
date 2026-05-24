@@ -10,7 +10,7 @@ import { OceanBackground } from '@/components/ui/OceanBackground'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = createClient() as any
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
