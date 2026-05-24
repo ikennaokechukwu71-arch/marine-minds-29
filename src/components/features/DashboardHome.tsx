@@ -114,6 +114,27 @@ export function DashboardHome({ stats, topStudents, announcements, upcomingEvent
         </motion.div>
       )}
 
+      {/* Announcements */}
+      {announcements.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+          <p className="section-eyebrow mb-4">📢 Announcements</p>
+          <div className="space-y-3">
+            {announcements.map(a => (
+              <div key={a.id} className="glass-card p-5">
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <h3 className="font-syne font-bold text-base">{a.title}</h3>
+                  {a.is_pinned && (
+                    <span className="badge text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 flex-shrink-0">📌 Pinned</span>
+                  )}
+                </div>
+                <p className="text-sm text-ocean-secondary leading-relaxed">{a.content}</p>
+                <p className="text-xs text-ocean-muted mt-3">{a.created_at ? format(new Date(a.created_at), 'MMM d, yyyy') : ''}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Quote + Fact */}
       <div className="grid md:grid-cols-2 gap-4">
         <motion.div
@@ -157,27 +178,6 @@ export function DashboardHome({ stats, topStudents, announcements, upcomingEvent
                   <p className="text-xs text-ocean-muted">{s.nickname ?? 'No nickname yet'}</p>
                 </div>
                 <span className="font-syne font-bold text-lg gradient-text-static">{(s.likes_count ?? 0).toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Announcements */}
-      {announcements.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-          <p className="section-eyebrow mb-4">📢 Announcements</p>
-          <div className="space-y-3">
-            {announcements.map(a => (
-              <div key={a.id} className="glass-card p-5">
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <h3 className="font-syne font-bold text-base">{a.title}</h3>
-                  {a.is_pinned && (
-                    <span className="badge text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 flex-shrink-0">📌 Pinned</span>
-                  )}
-                </div>
-                <p className="text-sm text-ocean-secondary leading-relaxed">{a.content}</p>
-                <p className="text-xs text-ocean-muted mt-3">{a.created_at ? format(new Date(a.created_at), 'MMM d, yyyy') : ''}</p>
               </div>
             ))}
           </div>

@@ -19,7 +19,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Student | null>(null)
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({ nickname: '', bio: '', favorite_quote: '', instagram_url: '', twitter_url: '', linkedin_url: '' })
+  const [editForm, setEditForm] = useState({ full_name: '', nickname: '', bio: '', favorite_quote: '', instagram_url: '', twitter_url: '', linkedin_url: '' })
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -35,6 +35,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
     setEditing(false)
     setAvatarPreview(null)
     setEditForm({
+      full_name: s.full_name ?? '',
       nickname: s.nickname ?? '',
       bio: s.bio ?? '',
       favorite_quote: s.favorite_quote ?? '',
@@ -78,6 +79,8 @@ export function DirectoryClient({ students, currentUserId }: Props) {
       toast.success('Profile updated! 🌊')
       setEditing(false)
       setSelected(s => s ? { ...s, ...editForm } : s)
+      // Refresh page to update name in nav
+      if (editForm.full_name !== selected?.full_name) window.location.reload()
     }
     setSaving(false)
   }
@@ -266,6 +269,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
 
                   <div className="space-y-3">
                     {[
+                      { label: 'Full Name', key: 'full_name', placeholder: 'Your full name' },
                       { label: 'Nickname', key: 'nickname', placeholder: 'The Barracuda' },
                       { label: 'Bio', key: 'bio', placeholder: 'Tell the crew who you are...' },
                       { label: 'Favorite Quote', key: 'favorite_quote', placeholder: '"The sea is everything..."' },

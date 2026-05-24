@@ -29,6 +29,7 @@ export function DashboardNav({ user, student }: Props) {
   const supabase = createClient() as any
   const [onlineCount, setOnlineCount] = useState(23)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -93,8 +94,8 @@ export function DashboardNav({ user, student }: Props) {
               <span className="text-xs text-ocean-secondary">{onlineCount} online</span>
             </div>
 
-            {/* Profile dropdown */}
-            <div className="relative">
+            {/* Profile dropdown - desktop */}
+            <div className="relative hidden md:block">
               <button onClick={() => setProfileOpen(o => !o)}>
                 <Avatar name={name} src={student?.avatar_url} size="sm" className="cursor-pointer hover:ring-2 hover:ring-cyan-400/50 transition-all" />
               </button>
@@ -113,7 +114,7 @@ export function DashboardNav({ user, student }: Props) {
                       <p className="text-xs text-ocean-muted truncate">{user.email}</p>
                     </div>
                     <Link
-                      href="/dashboard/profile"
+                      href="/dashboard/directory"
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-ocean-secondary hover:text-white hover:bg-white/5 transition-all"
                       onClick={() => setProfileOpen(false)}
                     >
@@ -138,9 +139,75 @@ export function DashboardNav({ user, student }: Props) {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden flex flex-col gap-1.5 p-2"
+              onClick={() => setMobileMenuOpen(o => !o)}
+            >
+              <span className={cn('block w-5 h-0.5 bg-white transition-all', mobileMenuOpen && 'rotate-45 translate-y-2')} />
+              <span className={cn('block w-5 h-0.5 bg-white transition-all', mobileMenuOpen && 'opacity-0')} />
+              <span className={cn('block w-5 h-0.5 bg-white transition-all', mobileMenuOpen && '-rotate-45 -translate-y-2')} />
+            </button>
           </div>
         </div>
       </nav>
+
+      {/* Mobile Slide-down Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-16 left-0 right-0 z-40 nav-glass border-t border-glass md:hidden"
+          >
+            <div className="max-w-6xl mx-auto px-4 py-4 space-y-1">
+              {/* User info */}
+              <div className="flex items-center gap-3 px-3 py-3 mb-2 border-b border-glass">
+                <Avatar name={name} src={student?.avatar_url} size="sm" />
+                <div>
+                  <p className="text-sm font-semibold">{name}</p>
+                  <p className="text-xs text-ocean-muted">{user.email}</p>
+                </div>
+              </div>
+
+              {NAV_ITEMS.map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all',
+                    pathname === item.href ? 'text-cyan-400 bg-cyan-400/10' : 'text-ocean-secondary hover:text-white hover:bg-white/5',
+                  )}
+                >
+                  <span>{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
+              {student?.is_admin && (
+                <Link
+                  href="/dashboard/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all',
+                    pathname === '/dashboard/admin' ? 'text-cyan-400 bg-cyan-400/10' : 'text-ocean-secondary hover:text-white hover:bg-white/5',
+                  )}
+                >
+                  <span>🛡️</span> Admin
+                </Link>
+              )}
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all"
+              >
+                <span>↩</span> Sign Out
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 nav-glass md:hidden">
@@ -158,12 +225,23 @@ export function DashboardNav({ user, student }: Props) {
               <span className="text-[10px] font-medium">{item.label}</span>
             </Link>
           ))}
+          {/* More button that opens the slide menu */}
+          <button
+            onClick={() => setMobileMenuOpen(o => !o)}
+            className={cn(
+              'flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all',
+              mobileMenuOpen ? 'text-cyan-400' : 'text-ocean-muted',
+            )}
+          >
+            <span className="text-lg leading-none">☰</span>
+            <span className="text-[10px] font-medium">More</span>
+          </button>
         </div>
       </nav>
 
       {/* Click outside to close */}
-      {profileOpen && (
-        <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+      {(profileOpen || mobileMenuOpen) && (
+        <div className="fixed inset-0 z-30" onClick={() => { setProfileOpen(false); setMobileMenuOpen(false) }} />
       )}
     </>
   )

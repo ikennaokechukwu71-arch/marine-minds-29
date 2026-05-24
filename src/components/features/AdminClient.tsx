@@ -18,20 +18,21 @@ interface Props {
   pendingMessages: AnonMessage[]
   flaggedMessages: AnonMessage[]
   pendingGallery: { id: string; image_url: string; caption: string | null; created_at: string }[]
-  recentSignups: { full_name: string; created_at: string }[]
+  recentSignups: { full_name: string; email?: string; created_at: string }[]
   stats: Stats
 }
 
 type Tab = 'overview' | 'messages' | 'gallery' | 'signups'
 
 export function AdminClient({ pendingMessages: initPending, flaggedMessages: initFlagged, pendingGallery: initGallery, recentSignups, stats }: Props) {
-  const supabase = createClient() as any as any
+  const supabase = createClient() as any
   const [tab, setTab] = useState<Tab>('overview')
   const [pending, setPending] = useState(initPending)
   const [flagged, setFlagged] = useState(initFlagged)
   const [gallery, setGallery] = useState(initGallery)
   const [newEvent, setNewEvent] = useState({ title: '', description: '', event_date: '', event_type: 'academic', location: '' })
   const [newAnnounce, setNewAnnounce] = useState({ title: '', content: '', is_pinned: false })
+  const [newPoll, setNewPoll] = useState({ question: '', options: ['', ''] })
   const [posting, setPosting] = useState(false)
 
   async function approveMessage(id: string) {
@@ -61,6 +62,11 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
     setPosting(false)
   }
 
+  async function deleteAnnouncement(id: string) {
+    await supabase.from('announcements').delete().eq('id', id)
+    toast.success('Announcement deleted.')
+  }
+
   async function postEvent() {
     if (!newEvent.title || !newEvent.event_date) { toast.error('Fill in title and date.'); return }
     setPosting(true)
@@ -68,6 +74,25 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
     await supabase.from('events').insert({ ...newEvent, created_by: user?.id ?? '' })
     toast.success('📅 Event added!')
     setNewEvent({ title: '', description: '', event_date: '', event_type: 'academic', location: '' })
+    setPosting(false)
+  }
+
+  async function postPoll() {
+    const validOptions = newPoll.options.filter(o => o.trim())
+    if (!newPoll.question.trim()) { toast.error('Enter a question.'); return }
+    if (validOptions.length < 2) { toast.error('Add at least 2 options.'); return }
+    setPosting(true)
+    const { data: poll, error } = await supabase
+      .from('polls')
+      .insert({ question: newPoll.question.trim(), is_active: true, total_votes: 0 })
+      .select()
+      .single()
+    if (error || !poll) { toast.error('Could not create poll.'); setPosting(false); return }
+    await supabase.from('poll_options').insert(
+      validOptions.map(o => ({ poll_id: poll.id, option_text: o.trim(), votes_count: 0 }))
+    )
+    toast.success('🗳️ Poll created!')
+    setNewPoll({ question: '', options: ['', ''] })
     setPosting(false)
   }
 
@@ -154,6 +179,33 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
               <input className="input-glass" placeholder="Location (optional)" value={newEvent.location} onChange={e => setNewEvent(ev => ({ ...ev, location: e.target.value }))} />
               <button className="btn-primary" onClick={postEvent} disabled={posting}>
                 {posting ? 'Saving...' : 'Add Event'}
+              </button>
+            </div>
+          </div>
+
+          {/* Create Poll */}
+          <div className="glass-card p-6">
+            <p className="font-syne font-bold text-base mb-4">🗳️ Create Poll</p>
+            <div className="space-y-3">
+              <input className="input-glass" placeholder="Poll question..." value={newPoll.question} onChange={e => setNewPoll(p => ({ ...p, question: e.target.value }))} />
+              {newPoll.options.map((opt, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    className="input-glass"
+                    placeholder={`Option ${i + 1}`}
+                    value={opt}
+                    onChange={e => setNewPoll(p => ({ ...p, options: p.options.map((o, j) => j === i ? e.target.value : o) }))}
+                  />
+                  {newPoll.options.length > 2 && (
+                    <button className="btn-danger px-3" onClick={() => setNewPoll(p => ({ ...p, options: p.options.filter((_, j) => j !== i) }))}>✕</button>
+                  )}
+                </div>
+              ))}
+              <button className="btn-glass text-sm w-full" onClick={() => setNewPoll(p => ({ ...p, options: [...p.options, ''] }))}>
+                + Add Option
+              </button>
+              <button className="btn-primary" onClick={postPoll} disabled={posting}>
+                {posting ? 'Creating...' : 'Create Poll'}
               </button>
             </div>
           </div>
@@ -246,13 +298,20 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
       {tab === 'signups' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           <p className="font-syne font-bold text-lg">Recent Signups</p>
+          {recentSignups.length === 0 && (
+            <div className="text-center py-12 text-ocean-muted glass-card">
+              <p className="text-4xl mb-3">👥</p>
+              <p>No signups yet.</p>
+            </div>
+          )}
           {recentSignups.map((s, i) => (
             <div key={i} className="glass-card flex items-center gap-4 p-4">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center font-syne font-bold text-ocean-deep text-sm flex-shrink-0">
-                {s.full_name.split(' ').slice(0,2).map(n=>n[0]).join('')}
+                {(s.full_name ?? '?').split(' ').slice(0,2).map((n: string) => n[0]).join('')}
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-sm">{s.full_name}</p>
+                {s.email && <p className="text-xs text-ocean-muted">{s.email}</p>}
                 <p className="text-xs text-ocean-muted">{timeAgo(s.created_at)}</p>
               </div>
             </div>
