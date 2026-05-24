@@ -54,7 +54,7 @@ export function GalleryClient({ uploads, userId }: Props) {
     const path = `gallery/${userId}-${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage.from('uploads').upload(path, file)
     if (uploadError) { toast.error('Upload failed.'); setUploading(false); return }
-    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(path)
+    const { data: { publicUrl } } = supabase.storage.from('gallery').getPublicUrl(path)
     const { error } = await supabase.from('gallery_uploads').insert({
       uploaded_by: userId, image_url: publicUrl, caption, category, is_approved: false,
     })
