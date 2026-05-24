@@ -40,10 +40,14 @@ export default function SignupPage() {
       toast.error(error.message)
     } else if (data.user) {
       // Create student profile
-      await supabase.from('students').insert({
-        user_id: data.user.id,
-        full_name: form.fullName,
-      })
+      await supabase
+  .from('students')
+  .insert([
+    {
+      user_id: data?.user?.id || '',
+      full_name: form.fullName || '',
+    }
+  ] as any)
       toast.success('Welcome to Marine Minds 29! Check your email to verify. 🌊')
       router.push('/auth/login')
     }
