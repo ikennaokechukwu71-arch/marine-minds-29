@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { AdminClient } from '@/components/features/AdminClient'
 
 export default async function AdminPage() {
@@ -11,7 +12,7 @@ export default async function AdminPage() {
     .from('students')
     .select('is_admin')
     .eq('user_id', user.id)
-    .single() as { data: { is_admin: boolean } | null, error: unknown }
+    .single()
 
   if (!studentProfile?.is_admin) redirect('/dashboard')
 
@@ -24,13 +25,15 @@ export default async function AdminPage() {
     { count: totalMessages },
     { data: pendingGallery },
     { data: recentSignups },
+    { data: announcements },
   ] = await Promise.all([
     admin.from('anonymous_messages').select('*').eq('is_approved', false).eq('is_flagged', false).order('created_at', { ascending: false }),
     admin.from('anonymous_messages').select('*').eq('is_flagged', true),
     admin.from('students').select('*', { count: 'exact', head: true }),
     admin.from('anonymous_messages').select('*', { count: 'exact', head: true }),
     admin.from('gallery_uploads').select('*').eq('is_approved', false).order('created_at', { ascending: false }),
-    admin.from('students').select('full_name, email, created_at').order('created_at', { ascending: false }).limit(5),
+    admin.from('students').select('full_name, email, created_at, user_id').order('created_at', { ascending: false }).limit(10),
+    admin.from('announcements').select('*').order('created_at', { ascending: false }),
   ])
 
   return (
@@ -39,6 +42,7 @@ export default async function AdminPage() {
       flaggedMessages={flaggedMessages ?? []}
       pendingGallery={pendingGallery ?? []}
       recentSignups={recentSignups ?? []}
+      announcements={announcements ?? []}
       stats={{
         totalStudents: totalStudents ?? 0,
         totalMessages: totalMessages ?? 0,

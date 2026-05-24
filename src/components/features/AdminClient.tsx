@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { getMessageTypeEmoji, getMessageTypeColor, timeAgo } from '@/lib/utils'
 import type { AnonMessage } from '@/types/database'
@@ -14,22 +15,32 @@ interface Stats {
   flaggedCount: number
 }
 
+interface Announcement {
+  id: string
+  title: string
+  content: string
+  is_pinned: boolean
+  created_at: string
+}
+
 interface Props {
   pendingMessages: AnonMessage[]
   flaggedMessages: AnonMessage[]
   pendingGallery: { id: string; image_url: string; caption: string | null; created_at: string }[]
   recentSignups: { full_name: string; email?: string; created_at: string }[]
+  announcements: Announcement[]
   stats: Stats
 }
 
-type Tab = 'overview' | 'messages' | 'gallery' | 'signups'
+type Tab = 'overview' | 'messages' | 'gallery' | 'announcements' | 'signups'
 
-export function AdminClient({ pendingMessages: initPending, flaggedMessages: initFlagged, pendingGallery: initGallery, recentSignups, stats }: Props) {
+export function AdminClient({ pendingMessages: initPending, flaggedMessages: initFlagged, pendingGallery: initGallery, recentSignups, announcements: initAnnouncements, stats }: Props) {
   const supabase = createClient() as any
   const [tab, setTab] = useState<Tab>('overview')
   const [pending, setPending] = useState(initPending)
   const [flagged, setFlagged] = useState(initFlagged)
   const [gallery, setGallery] = useState(initGallery)
+  const [announcements, setAnnouncements] = useState(initAnnouncements)
   const [newEvent, setNewEvent] = useState({ title: '', description: '', event_date: '', event_type: 'academic', location: '' })
   const [newAnnounce, setNewAnnounce] = useState({ title: '', content: '', is_pinned: false })
   const [newPoll, setNewPoll] = useState({ question: '', options: ['', ''] })
@@ -56,14 +67,17 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
     if (!newAnnounce.title || !newAnnounce.content) { toast.error('Fill in title and content.'); return }
     setPosting(true)
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('announcements').insert({ ...newAnnounce, created_by: user?.id ?? '' })
+    const { data, error } = await supabase.from('announcements').insert({ ...newAnnounce, created_by: user?.id ?? '' }).select().single()
+    if (error) { toast.error('Could not post announcement.'); setPosting(false); return }
     toast.success('📢 Announcement posted!')
+    setAnnouncements(a => [data, ...a])
     setNewAnnounce({ title: '', content: '', is_pinned: false })
     setPosting(false)
   }
 
   async function deleteAnnouncement(id: string) {
     await supabase.from('announcements').delete().eq('id', id)
+    setAnnouncements(a => a.filter(x => x.id !== id))
     toast.success('Announcement deleted.')
   }
 
@@ -100,6 +114,7 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
     { key: 'overview', label: '📊 Overview' },
     { key: 'messages', label: '🌑 Messages', badge: pending.length },
     { key: 'gallery', label: '📸 Gallery', badge: gallery.length },
+    { key: 'announcements', label: '📢 Announcements', badge: announcements.length },
     { key: 'signups', label: '👥 Signups' },
   ]
 
@@ -247,7 +262,6 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
               </motion.div>
             ))}
           </AnimatePresence>
-
           {flagged.length > 0 && (
             <>
               <p className="font-syne font-bold text-base mt-6 text-pink-400">🚩 Flagged Content ({flagged.length})</p>
@@ -294,6 +308,48 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
         </motion.div>
       )}
 
+      {/* Announcements Tab */}
+      {tab === 'announcements' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          <p className="font-syne font-bold text-lg">{announcements.length} Announcements</p>
+          {announcements.length === 0 ? (
+            <div className="text-center py-12 text-ocean-muted glass-card">
+              <p className="text-4xl mb-3">📢</p>
+              <p>No announcements yet.</p>
+            </div>
+          ) : (
+            <AnimatePresence>
+              {announcements.map(a => (
+                <motion.div
+                  key={a.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="glass-card p-5"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-syne font-bold text-base">{a.title}</h3>
+                      {a.is_pinned && (
+                        <span className="badge text-cyan-400 bg-cyan-400/10 border border-cyan-400/20">📌 Pinned</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => deleteAnnouncement(a.id)}
+                      className="btn-danger text-xs flex-shrink-0 px-3 py-1.5"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                  <p className="text-sm text-ocean-secondary leading-relaxed mb-3">{a.content}</p>
+                  <p className="text-xs text-ocean-muted">{a.created_at ? format(new Date(a.created_at), 'MMM d, yyyy · h:mm a') : ''}</p>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </motion.div>
+      )}
+
       {/* Recent Signups */}
       {tab === 'signups' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
@@ -307,7 +363,7 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
           {recentSignups.map((s, i) => (
             <div key={i} className="glass-card flex items-center gap-4 p-4">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center font-syne font-bold text-ocean-deep text-sm flex-shrink-0">
-                {(s.full_name ?? '?').split(' ').slice(0,2).map((n: string) => n[0]).join('')}
+                {(s.full_name ?? '?').split(' ').slice(0, 2).map((n: string) => n[0]).join('')}
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-sm">{s.full_name}</p>
