@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { AdminClient } from '@/components/features/AdminClient'
 
 export default async function AdminPage() {
@@ -15,6 +15,8 @@ export default async function AdminPage() {
 
   if (!studentProfile?.is_admin) redirect('/dashboard')
 
+  const admin = createAdminClient() as any
+
   const [
     { data: pendingMessages },
     { data: flaggedMessages },
@@ -23,12 +25,12 @@ export default async function AdminPage() {
     { data: pendingGallery },
     { data: recentSignups },
   ] = await Promise.all([
-    supabase.from('anonymous_messages').select('*').eq('is_approved', false).eq('is_flagged', false).order('created_at', { ascending: false }),
-    supabase.from('anonymous_messages').select('*').eq('is_flagged', true),
-    supabase.from('students').select('*', { count: 'exact', head: true }),
-    supabase.from('anonymous_messages').select('*', { count: 'exact', head: true }),
-    supabase.from('gallery_uploads').select('*').eq('is_approved', false).order('created_at', { ascending: false }),
-    supabase.from('students').select('full_name, email, created_at').order('created_at', { ascending: false }).limit(5),
+    admin.from('anonymous_messages').select('*').eq('is_approved', false).eq('is_flagged', false).order('created_at', { ascending: false }),
+    admin.from('anonymous_messages').select('*').eq('is_flagged', true),
+    admin.from('students').select('*', { count: 'exact', head: true }),
+    admin.from('anonymous_messages').select('*', { count: 'exact', head: true }),
+    admin.from('gallery_uploads').select('*').eq('is_approved', false).order('created_at', { ascending: false }),
+    admin.from('students').select('full_name, email, created_at').order('created_at', { ascending: false }).limit(5),
   ])
 
   return (
