@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Avatar } from '@/components/ui/Avatar'
@@ -19,6 +19,9 @@ export function DirectoryClient({ students, currentUserId }: Props) {
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ nickname: '', bio: '', favorite_quote: '', instagram_url: '', twitter_url: '', linkedin_url: '' })
   const [saving, setSaving] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const avatarRef = useRef<HTMLInputElement>(null)
 
   const filtered = students.filter(s =>
     s.full_name.toLowerCase().includes(query.toLowerCase()) ||
@@ -28,6 +31,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
   function openProfile(s: Student) {
     setSelected(s)
     setEditing(false)
+    setAvatarPreview(null)
     setEditForm({
       nickname: s.nickname ?? '',
       bio: s.bio ?? '',
@@ -36,6 +40,27 @@ export function DirectoryClient({ students, currentUserId }: Props) {
       twitter_url: s.twitter_url ?? '',
       linkedin_url: s.linkedin_url ?? '',
     })
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image too large. Max 2MB.'); return }
+    setUploadingAvatar(true)
+    const ext = file.name.split('.').pop()
+    const path = `avatars/${currentUserId}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('uploads').upload(path, file, { upsert: true })
+    if (uploadError) { toast.error('Avatar upload failed.'); setUploadingAvatar(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(path)
+    const { error } = await supabase.from('students').update({ avatar_url: publicUrl }).eq('user_id', currentUserId)
+    if (error) {
+      toast.error('Could not save avatar.')
+    } else {
+      setAvatarPreview(publicUrl)
+      setSelected(s => s ? { ...s, avatar_url: publicUrl } : s)
+      toast.success('Profile photo updated! 🌊')
+    }
+    setUploadingAvatar(false)
   }
 
   async function saveProfile() {
@@ -50,7 +75,6 @@ export function DirectoryClient({ students, currentUserId }: Props) {
     } else {
       toast.success('Profile updated! 🌊')
       setEditing(false)
-      // Optimistic update
       setSelected(s => s ? { ...s, ...editForm } : s)
     }
     setSaving(false)
@@ -135,11 +159,10 @@ export function DirectoryClient({ students, currentUserId }: Props) {
                 onClick={() => setSelected(null)}
               >✕</button>
 
-              <Avatar name={selected.full_name} src={selected.avatar_url} size="xl"
-                className="mx-auto mb-4 ring-4 ring-cyan-400/30 shadow-[0_0_30px_rgba(0,212,255,0.3)]" />
-
               {!editing ? (
                 <>
+                  <Avatar name={selected.full_name} src={selected.avatar_url} size="xl"
+                    className="mx-auto mb-4 ring-4 ring-cyan-400/30 shadow-[0_0_30px_rgba(0,212,255,0.3)]" />
                   <h2 className="font-syne text-2xl font-extrabold text-center mb-1">{selected.full_name}</h2>
                   {selected.nickname && <p className="text-center gradient-text-static font-semibold mb-4">✦ {selected.nickname}</p>}
                   {selected.favorite_quote && (
@@ -167,6 +190,28 @@ export function DirectoryClient({ students, currentUserId }: Props) {
               ) : (
                 <>
                   <h2 className="font-syne text-xl font-bold text-center mb-5">Edit Your Profile</h2>
+
+                  {/* Avatar Upload */}
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="relative group cursor-pointer" onClick={() => avatarRef.current?.click()}>
+                      <Avatar
+                        name={selected.full_name}
+                        src={avatarPreview ?? selected.avatar_url}
+                        size="xl"
+                        className="ring-4 ring-cyan-400/30"
+                      />
+                      <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        {uploadingAvatar ? (
+                          <span className="text-white text-xs">Uploading...</span>
+                        ) : (
+                          <span className="text-white text-xs">📷 Change</span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-ocean-muted mt-2">Click photo to change · Max 2MB</p>
+                    <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                  </div>
+
                   <div className="space-y-3">
                     {[
                       { label: 'Nickname', key: 'nickname', placeholder: 'The Barracuda' },
