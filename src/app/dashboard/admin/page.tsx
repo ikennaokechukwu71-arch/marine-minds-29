@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { AdminClient } from '@/components/features/AdminClient'
 
 export default async function AdminPage() {
@@ -26,6 +25,7 @@ export default async function AdminPage() {
     { data: pendingGallery },
     { data: recentSignups },
     { data: announcements },
+    { data: polls },
   ] = await Promise.all([
     admin.from('anonymous_messages').select('*').eq('is_approved', false).eq('is_flagged', false).order('created_at', { ascending: false }),
     admin.from('anonymous_messages').select('*').eq('is_flagged', true),
@@ -34,6 +34,7 @@ export default async function AdminPage() {
     admin.from('gallery_uploads').select('*').eq('is_approved', false).order('created_at', { ascending: false }),
     admin.from('students').select('full_name, email, created_at, user_id').order('created_at', { ascending: false }).limit(10),
     admin.from('announcements').select('*').order('created_at', { ascending: false }),
+    admin.from('polls').select('*, poll_options(*)').order('created_at', { ascending: false }),
   ])
 
   return (
@@ -43,6 +44,7 @@ export default async function AdminPage() {
       pendingGallery={pendingGallery ?? []}
       recentSignups={recentSignups ?? []}
       announcements={announcements ?? []}
+      polls={polls ?? []}
       stats={{
         totalStudents: totalStudents ?? 0,
         totalMessages: totalMessages ?? 0,

@@ -23,24 +23,41 @@ interface Announcement {
   created_at: string
 }
 
+interface PollOption {
+  id: string
+  option_text: string
+  votes_count: number
+}
+
+interface Poll {
+  id: string
+  question: string
+  total_votes: number
+  is_active: boolean
+  created_at: string
+  poll_options: PollOption[]
+}
+
 interface Props {
   pendingMessages: AnonMessage[]
   flaggedMessages: AnonMessage[]
   pendingGallery: { id: string; image_url: string; caption: string | null; created_at: string }[]
   recentSignups: { full_name: string; email?: string; created_at: string }[]
   announcements: Announcement[]
+  polls: Poll[]
   stats: Stats
 }
 
-type Tab = 'overview' | 'messages' | 'gallery' | 'announcements' | 'signups'
+type Tab = 'overview' | 'messages' | 'gallery' | 'announcements' | 'polls' | 'signups'
 
-export function AdminClient({ pendingMessages: initPending, flaggedMessages: initFlagged, pendingGallery: initGallery, recentSignups, announcements: initAnnouncements, stats }: Props) {
+export function AdminClient({ pendingMessages: initPending, flaggedMessages: initFlagged, pendingGallery: initGallery, recentSignups, announcements: initAnnouncements, polls: initPolls, stats }: Props) {
   const supabase = createClient() as any
   const [tab, setTab] = useState<Tab>('overview')
   const [pending, setPending] = useState(initPending)
   const [flagged, setFlagged] = useState(initFlagged)
   const [gallery, setGallery] = useState(initGallery)
   const [announcements, setAnnouncements] = useState(initAnnouncements)
+  const [polls, setPolls] = useState(initPolls)
   const [newEvent, setNewEvent] = useState({ title: '', description: '', event_date: '', event_type: 'academic', location: '' })
   const [newAnnounce, setNewAnnounce] = useState({ title: '', content: '', is_pinned: false })
   const [newPoll, setNewPoll] = useState({ question: '', options: ['', ''] })
@@ -102,12 +119,27 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
       .select()
       .single()
     if (error || !poll) { toast.error('Could not create poll.'); setPosting(false); return }
-    await supabase.from('poll_options').insert(
+    const { data: options } = await supabase.from('poll_options').insert(
       validOptions.map(o => ({ poll_id: poll.id, option_text: o.trim(), votes_count: 0 }))
-    )
+    ).select()
     toast.success('🗳️ Poll created!')
+    setPolls(ps => [{ ...poll, poll_options: options ?? [] }, ...ps])
     setNewPoll({ question: '', options: ['', ''] })
     setPosting(false)
+  }
+
+  async function deletePoll(id: string) {
+    await supabase.from('poll_votes').delete().eq('poll_id', id)
+    await supabase.from('poll_options').delete().eq('poll_id', id)
+    await supabase.from('polls').delete().eq('id', id)
+    setPolls(ps => ps.filter(p => p.id !== id))
+    toast.success('Poll deleted.')
+  }
+
+  async function togglePoll(id: string, current: boolean) {
+    await supabase.from('polls').update({ is_active: !current }).eq('id', id)
+    setPolls(ps => ps.map(p => p.id === id ? { ...p, is_active: !current } : p))
+    toast.success(current ? 'Poll closed.' : 'Poll reopened.')
   }
 
   const TABS: { key: Tab; label: string; badge?: number }[] = [
@@ -115,6 +147,7 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
     { key: 'messages', label: '🌑 Messages', badge: pending.length },
     { key: 'gallery', label: '📸 Gallery', badge: gallery.length },
     { key: 'announcements', label: '📢 Announcements', badge: announcements.length },
+    { key: 'polls', label: '🗳️ Polls', badge: polls.length },
     { key: 'signups', label: '👥 Signups' },
   ]
 
@@ -239,13 +272,7 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
           )}
           <AnimatePresence>
             {pending.map(msg => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 30, height: 0 }}
-                className="glass-card p-5"
-              >
+              <motion.div key={msg.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30, height: 0 }} className="glass-card p-5">
                 <div className="flex items-start gap-4">
                   <span className={`badge border ${getMessageTypeColor(msg.message_type)} text-xs flex-shrink-0`}>
                     {getMessageTypeEmoji(msg.message_type)} {msg.message_type}
@@ -276,7 +303,7 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
         </motion.div>
       )}
 
-      {/* Gallery Moderation */}
+      {/* Gallery */}
       {tab === 'gallery' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <p className="font-syne font-bold text-lg">{gallery.length} Pending Photos</p>
@@ -308,7 +335,7 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
         </motion.div>
       )}
 
-      {/* Announcements Tab */}
+      {/* Announcements */}
       {tab === 'announcements' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <p className="font-syne font-bold text-lg">{announcements.length} Announcements</p>
@@ -320,26 +347,13 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
           ) : (
             <AnimatePresence>
               {announcements.map(a => (
-                <motion.div
-                  key={a.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="glass-card p-5"
-                >
+                <motion.div key={a.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} className="glass-card p-5">
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-syne font-bold text-base">{a.title}</h3>
-                      {a.is_pinned && (
-                        <span className="badge text-cyan-400 bg-cyan-400/10 border border-cyan-400/20">📌 Pinned</span>
-                      )}
+                      {a.is_pinned && <span className="badge text-cyan-400 bg-cyan-400/10 border border-cyan-400/20">📌 Pinned</span>}
                     </div>
-                    <button
-                      onClick={() => deleteAnnouncement(a.id)}
-                      className="btn-danger text-xs flex-shrink-0 px-3 py-1.5"
-                    >
-                      🗑️ Delete
-                    </button>
+                    <button onClick={() => deleteAnnouncement(a.id)} className="btn-danger text-xs flex-shrink-0 px-3 py-1.5">🗑️ Delete</button>
                   </div>
                   <p className="text-sm text-ocean-secondary leading-relaxed mb-3">{a.content}</p>
                   <p className="text-xs text-ocean-muted">{a.created_at ? format(new Date(a.created_at), 'MMM d, yyyy · h:mm a') : ''}</p>
@@ -350,7 +364,60 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
         </motion.div>
       )}
 
-      {/* Recent Signups */}
+      {/* Polls */}
+      {tab === 'polls' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          <p className="font-syne font-bold text-lg">{polls.length} Polls</p>
+          {polls.length === 0 ? (
+            <div className="text-center py-12 text-ocean-muted glass-card">
+              <p className="text-4xl mb-3">🗳️</p>
+              <p>No polls yet. Create one in the Overview tab.</p>
+            </div>
+          ) : (
+            <AnimatePresence>
+              {polls.map(poll => (
+                <motion.div key={poll.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} className="glass-card p-5">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="font-syne font-bold text-base">{poll.question}</h3>
+                        <span className={`badge border text-xs ${poll.is_active ? 'text-green-400 bg-green-400/10 border-green-400/20' : 'text-ocean-muted bg-glass border-glass'}`}>
+                          {poll.is_active ? '🟢 Active' : '⚫ Closed'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-ocean-muted">{poll.total_votes} votes · {poll.created_at ? format(new Date(poll.created_at), 'MMM d, yyyy') : ''}</p>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => togglePoll(poll.id, poll.is_active)} className="btn-glass text-xs px-3 py-1.5">
+                        {poll.is_active ? '⏸ Close' : '▶ Reopen'}
+                      </button>
+                      <button onClick={() => deletePoll(poll.id)} className="btn-danger text-xs px-3 py-1.5">🗑️ Delete</button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {poll.poll_options.map(opt => {
+                      const pct = poll.total_votes > 0 ? Math.round((opt.votes_count / poll.total_votes) * 100) : 0
+                      return (
+                        <div key={opt.id}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-ocean-secondary">{opt.option_text}</span>
+                            <span className="text-ocean-muted">{opt.votes_count} ({pct}%)</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-glass overflow-hidden">
+                            <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-teal-400 transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </motion.div>
+      )}
+
+      {/* Signups */}
       {tab === 'signups' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           <p className="font-syne font-bold text-lg">Recent Signups</p>
