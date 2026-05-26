@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 ]
 
 interface Props {
-  user: User
+  user: User | null
   student: { full_name: string; nickname: string | null; avatar_url: string | null; is_admin: boolean } | null
 }
 
@@ -44,14 +44,14 @@ export function DashboardNav({ user, student }: Props) {
     router.refresh()
   }
 
-  const name = student?.full_name ?? user.email ?? 'guest'
+  const isGuest = !user
+  const name = student?.full_name ?? user?.email ?? 'Guest'
 
   return (
     <>
       {/* Top Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 nav-glass">
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          {/* Logo */}
           <Link href="/dashboard" className="font-syne text-lg font-extrabold gradient-text-static">
             Marine Minds 29
           </Link>
@@ -94,51 +94,58 @@ export function DashboardNav({ user, student }: Props) {
               <span className="text-xs text-ocean-secondary">{onlineCount} online</span>
             </div>
 
-            {/* Profile dropdown - desktop */}
-            <div className="relative hidden md:block">
-              <button onClick={() => setProfileOpen(o => !o)}>
-                <Avatar name={name} src={student?.avatar_url} size="sm" className="cursor-pointer hover:ring-2 hover:ring-cyan-400/50 transition-all" />
-              </button>
-              <AnimatePresence>
-                {profileOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-10 w-52 glass-card p-2 shadow-2xl"
-                    style={{ zIndex: 200 }}
-                  >
-                    <div className="px-3 py-2 border-b border-glass mb-1">
-                      <p className="text-sm font-semibold truncate">{name}</p>
-                      <p className="text-xs text-ocean-muted truncate">{user?.email}</p>
-                    </div>
-                    <Link
-                      href="/dashboard/directory"
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-ocean-secondary hover:text-white hover:bg-white/5 transition-all"
-                      onClick={() => setProfileOpen(false)}
+            {/* Guest: show login button */}
+            {isGuest ? (
+              <Link href="/auth/login" className="btn-primary text-xs py-2 px-4 hidden md:block">
+                Sign In
+              </Link>
+            ) : (
+              /* Profile dropdown - desktop */
+              <div className="relative hidden md:block">
+                <button onClick={() => setProfileOpen(o => !o)}>
+                  <Avatar name={name} src={student?.avatar_url} size="sm" className="cursor-pointer hover:ring-2 hover:ring-cyan-400/50 transition-all" />
+                </button>
+                <AnimatePresence>
+                  {profileOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-10 w-52 glass-card p-2 shadow-2xl"
+                      style={{ zIndex: 200 }}
                     >
-                      ✦ Edit Profile
-                    </Link>
-                    {student?.is_admin && (
+                      <div className="px-3 py-2 border-b border-glass mb-1">
+                        <p className="text-sm font-semibold truncate">{name}</p>
+                        <p className="text-xs text-ocean-muted truncate">{user?.email}</p>
+                      </div>
                       <Link
-                        href="/dashboard/admin"
+                        href="/dashboard/directory"
                         className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-ocean-secondary hover:text-white hover:bg-white/5 transition-all"
                         onClick={() => setProfileOpen(false)}
                       >
-                        🛡️ Admin Panel
+                        ✦ Edit Profile
                       </Link>
-                    )}
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-400/10 transition-all"
-                    >
-                      ↩ Sign Out
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                      {student?.is_admin && (
+                        <Link
+                          href="/dashboard/admin"
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-ocean-secondary hover:text-white hover:bg-white/5 transition-all"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          🛡️ Admin Panel
+                        </Link>
+                      )}
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-400/10 transition-all"
+                      >
+                        ↩ Sign Out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             {/* Mobile hamburger */}
             <button
@@ -168,7 +175,7 @@ export function DashboardNav({ user, student }: Props) {
                 <Avatar name={name} src={student?.avatar_url} size="sm" />
                 <div>
                   <p className="text-sm font-semibold">{name}</p>
-                  <p className="text-xs text-ocean-muted">{user?.email}</p>
+                  <p className="text-xs text-ocean-muted">{isGuest ? 'Browsing as guest' : user?.email}</p>
                 </div>
               </div>
 
@@ -198,12 +205,23 @@ export function DashboardNav({ user, student }: Props) {
                   <span>🛡️</span> Admin
                 </Link>
               )}
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all"
-              >
-                <span>↩</span> Sign Out
-              </button>
+
+              {isGuest ? (
+                <Link
+                  href="/auth/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-cyan-400 hover:bg-cyan-400/10 transition-all"
+                >
+                  <span>🌊</span> Sign In
+                </Link>
+              ) : (
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all"
+                >
+                  <span>↩</span> Sign Out
+                </button>
+              )}
             </div>
           </motion.div>
         )}
@@ -225,7 +243,6 @@ export function DashboardNav({ user, student }: Props) {
               <span className="text-[10px] font-medium">{item.label}</span>
             </Link>
           ))}
-          {/* More button that opens the slide menu */}
           <button
             onClick={() => setMobileMenuOpen(o => !o)}
             className={cn(
@@ -239,7 +256,6 @@ export function DashboardNav({ user, student }: Props) {
         </div>
       </nav>
 
-      {/* Click outside to close */}
       {(profileOpen || mobileMenuOpen) && (
         <div className="fixed inset-0 z-30" onClick={() => { setProfileOpen(false); setMobileMenuOpen(false) }} />
       )}
