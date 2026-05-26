@@ -27,21 +27,49 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
   }
 
   async function castVote(pollId: string, optionId: string) {
-    if (hasVoted(pollId)) { toast.error('You already voted in this poll!'); return }
+    if (!userId) { toast.error('Sign in to vote.'); return }
+    if (voting) return
+
+    const previousOptionId = votedOption(pollId)
+    const isSameOption = previousOptionId === optionId
+    if (isSameOption) return // clicking same option does nothing
+
     setVoting(optionId)
-    const { error } = await supabase.from('poll_votes').insert({ poll_id: pollId, option_id: optionId, user_id: userId })
+
+    if (previousOptionId) {
+      // Switching vote — delete old vote first
+      await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('user_id', userId)
+      await supabase.rpc('decrement_poll_vote', { option_id: previousOptionId, poll_id: pollId })
+    }
+
+    // Insert new vote
+    const { error } = await supabase
+      .from('poll_votes')
+      .insert({ poll_id: pollId, option_id: optionId, user_id: userId })
+
     if (error) {
       toast.error('Could not cast vote.')
       console.error('Vote error:', error)
     } else {
       await supabase.rpc('increment_poll_vote', { option_id: optionId, poll_id: pollId })
-      setUserVotes(v => [...v, { poll_id: pollId, option_id: optionId }])
-      setPolls(ps => ps.map(p => p.id !== pollId ? p : {
-        ...p,
-        total_votes: p.total_votes + 1,
-        poll_options: p.poll_options.map(o => o.id === optionId ? { ...o, votes_count: o.votes_count + 1 } : o),
+
+      setUserVotes(v => {
+        const filtered = v.filter(x => x.poll_id !== pollId)
+        return [...filtered, { poll_id: pollId, option_id: optionId }]
+      })
+
+      setPolls(ps => ps.map(p => {
+        if (p.id !== pollId) return p
+        const totalDelta = previousOptionId ? 0 : 1 // total only changes if first vote
+        const newOptions = p.poll_options.map(o => {
+          if (o.id === optionId) return { ...o, votes_count: o.votes_count + 1 }
+          if (o.id === previousOptionId) return { ...o, votes_count: Math.max(o.votes_count - 1, 0) }
+          return o
+        })
+        return { ...p, total_votes: p.total_votes + totalDelta, poll_options: newOptions }
       }))
-      toast.success('✦ Vote counted! Democracy lives in Marine Minds.')
+
+      toast.success(previousOptionId ? '✦ Vote changed!' : '✦ Vote counted!')
     }
     setVoting(null)
   }
@@ -58,7 +86,7 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
         {polls.map((poll, pi) => {
           const voted = hasVoted(poll.id)
           const myVote = votedOption(poll.id)
-          const total = poll.total_votes || 1
+          const total = poll.total_votes > 0 ? poll.total_votes : 0
 
           return (
             <motion.div
@@ -68,56 +96,72 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
               transition={{ delay: pi * 0.08 }}
               className="glass-card p-6"
             >
-              <h2 className="font-syne font-bold text-lg mb-2">{poll.question}</h2>
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h2 className="font-syne font-bold text-lg">{poll.question}</h2>
+                {!poll.is_active && (
+                  <span className="badge text-ocean-muted bg-glass border border-glass text-xs flex-shrink-0">Closed</span>
+                )}
+              </div>
               <p className="text-xs text-ocean-muted mb-5">
-                {poll.total_votes.toLocaleString()} votes cast
-                {voted ? ' · You voted' : ' · Tap to vote'}
+                {total.toLocaleString()} {total === 1 ? 'vote' : 'votes'} cast
+                {voted ? ' · Tap to change vote' : poll.is_active ? ' · Tap to vote' : ''}
               </p>
 
               <div className="space-y-3">
                 {poll.poll_options.map(opt => {
-                  const pct = Math.round((opt.votes_count / total) * 100)
+                  const pct = total > 0 ? Math.round((opt.votes_count / total) * 100) : 0
                   const isMyVote = myVote === opt.id
+                  const isDisabled = !poll.is_active || voting !== null || !userId
 
                   return (
                     <button
                       key={opt.id}
-                      disabled={voted || voting === opt.id}
+                      disabled={isDisabled}
                       onClick={() => castVote(poll.id, opt.id)}
                       className="w-full text-left relative rounded-xl overflow-hidden transition-all group"
                       style={{
                         padding: '12px 16px',
                         border: `1px solid ${isMyVote ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
                         background: isMyVote ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.02)',
+                        cursor: isDisabled ? 'default' : 'pointer',
                       }}
                     >
                       {/* Vote bar */}
-                      {voted && (
+                      {voted && total > 0 && (
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
                           className="absolute inset-0 rounded-xl"
-                          style={{ background: 'linear-gradient(90deg,rgba(0,212,255,0.08),rgba(0,255,204,0.06))' }}
+                          style={{ background: isMyVote ? 'linear-gradient(90deg,rgba(0,212,255,0.12),rgba(0,255,204,0.08))' : 'linear-gradient(90deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))' }}
                         />
                       )}
 
                       <div className="relative z-10 flex items-center justify-between">
                         <span className="text-sm font-medium">{opt.option_text}</span>
-                        {voted && (
+                        {voted ? (
                           <div className="flex items-center gap-2">
-                            {isMyVote && <span className="text-cyan-400 text-xs">✓ Your vote</span>}
-                            <span className="font-syne font-bold text-cyan-400 text-sm">{pct}%</span>
+                            {isMyVote && <span className="text-cyan-400 text-xs font-semibold">✓ Your vote</span>}
+                            <span className="font-syne font-bold text-sm" style={{ color: isMyVote ? 'var(--cyan)' : 'var(--text-muted)' }}>
+                              {pct}%
+                            </span>
                           </div>
-                        )}
-                        {!voted && (
-                          <span className="text-xs text-ocean-muted group-hover:text-cyan-400 transition-colors">Vote →</span>
+                        ) : (
+                          poll.is_active && userId && (
+                            <span className="text-xs text-ocean-muted group-hover:text-cyan-400 transition-colors">
+                              {voting === opt.id ? '...' : 'Vote →'}
+                            </span>
+                          )
                         )}
                       </div>
                     </button>
                   )
                 })}
               </div>
+
+              {!userId && poll.is_active && (
+                <p className="text-xs text-ocean-muted mt-3 text-center">Sign in to vote</p>
+              )}
             </motion.div>
           )
         })}
