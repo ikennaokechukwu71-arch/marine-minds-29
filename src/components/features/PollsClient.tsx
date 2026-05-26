@@ -34,7 +34,7 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
       toast.error('Could not cast vote.')
       console.error('Vote error:', error)
     } else {
-      await supabase.rpc('increment_poll_vote', { option_id: optionId, poll_id: pollId }).catch(() => {})
+      await supabase.rpc('increment_poll_vote', { option_id: optionId, poll_id: pollId })
       setUserVotes(v => [...v, { poll_id: pollId, option_id: optionId }])
       setPolls(ps => ps.map(p => p.id !== pollId ? p : {
         ...p,
