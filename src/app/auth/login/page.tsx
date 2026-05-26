@@ -75,6 +75,23 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {/* Guest Access */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-glass" />
+          </div>
+          <div className="relative flex justify-center text-xs text-ocean-muted">
+            <span className="px-3" style={{ background: 'var(--ocean-mid)' }}>or</span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="btn-glass w-full text-sm"
+        >
+          👀 Browse as Guest
+        </button>
+
         <div className="mt-6 text-center space-y-3">
           <Link
             href="/auth/forgot-password"
