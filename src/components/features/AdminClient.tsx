@@ -113,9 +113,10 @@ export function AdminClient({ pendingMessages: initPending, flaggedMessages: ini
     if (!newPoll.question.trim()) { toast.error('Enter a question.'); return }
     if (validOptions.length < 2) { toast.error('Add at least 2 options.'); return }
     setPosting(true)
+    const { data: { user } } = await supabase.auth.getUser()
     const { data: poll, error } = await supabase
       .from('polls')
-      .insert({ question: newPoll.question.trim(), is_active: true, total_votes: 0 })
+      .insert({ question: newPoll.question.trim(), is_active: true, total_votes: 0, created_by: user?.id ?? '' })
       .select()
       .single()
     if (error || !poll) { toast.error('Could not create poll.'); setPosting(false); return }
