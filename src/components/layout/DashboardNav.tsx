@@ -44,7 +44,7 @@ export function DashboardNav({ user, student }: Props) {
     router.refresh()
   }
 
-  const name = student?.full_name ?? user.email ?? 'Student'
+  const name = student?.full_name ?? user.email ?? 'guest'
 
   return (
     <>
