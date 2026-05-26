@@ -111,7 +111,7 @@ export function DashboardNav({ user, student }: Props) {
                   >
                     <div className="px-3 py-2 border-b border-glass mb-1">
                       <p className="text-sm font-semibold truncate">{name}</p>
-                      <p className="text-xs text-ocean-muted truncate">{user.email}</p>
+                      <p className="text-xs text-ocean-muted truncate">{user?.email}</p>
                     </div>
                     <Link
                       href="/dashboard/directory"
@@ -168,7 +168,7 @@ export function DashboardNav({ user, student }: Props) {
                 <Avatar name={name} src={student?.avatar_url} size="sm" />
                 <div>
                   <p className="text-sm font-semibold">{name}</p>
-                  <p className="text-xs text-ocean-muted">{user.email}</p>
+                  <p className="text-xs text-ocean-muted">{user?.email}</p>
                 </div>
               </div>
 
