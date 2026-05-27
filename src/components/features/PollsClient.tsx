@@ -32,17 +32,15 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
 
     const previousOptionId = votedOption(pollId)
     const isSameOption = previousOptionId === optionId
-    if (isSameOption) return // clicking same option does nothing
+    if (isSameOption) return
 
     setVoting(optionId)
 
     if (previousOptionId) {
-      // Switching vote — delete old vote first
       await supabase.from('poll_votes').delete().eq('poll_id', pollId).eq('user_id', userId)
       await supabase.rpc('decrement_poll_vote', { option_id: previousOptionId, poll_id: pollId })
     }
 
-    // Insert new vote
     const { error } = await supabase
       .from('poll_votes')
       .insert({ poll_id: pollId, option_id: optionId, user_id: userId })
@@ -60,7 +58,7 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
 
       setPolls(ps => ps.map(p => {
         if (p.id !== pollId) return p
-        const totalDelta = previousOptionId ? 0 : 1 // total only changes if first vote
+        const totalDelta = previousOptionId ? 0 : 1
         const newOptions = p.poll_options.map(o => {
           if (o.id === optionId) return { ...o, votes_count: o.votes_count + 1 }
           if (o.id === previousOptionId) return { ...o, votes_count: Math.max(o.votes_count - 1, 0) }
@@ -85,6 +83,7 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
       <div className="space-y-6">
         {polls.map((poll, pi) => {
           const voted = hasVoted(poll.id)
+          const showResults = voted || !userId
           const myVote = votedOption(poll.id)
           const total = poll.total_votes > 0 ? poll.total_votes : 0
 
@@ -127,7 +126,7 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
                       }}
                     >
                       {/* Vote bar */}
-                      {voted && total > 0 && (
+                      {showResults && total > 0 && (
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
@@ -139,7 +138,7 @@ export function PollsClient({ polls: initial, userVotes: initialVotes, userId }:
 
                       <div className="relative z-10 flex items-center justify-between">
                         <span className="text-sm font-medium">{opt.option_text}</span>
-                        {voted ? (
+                        {showResults ? (
                           <div className="flex items-center gap-2">
                             {isMyVote && <span className="text-cyan-400 text-xs font-semibold">✓ Your vote</span>}
                             <span className="font-syne font-bold text-sm" style={{ color: isMyVote ? 'var(--cyan)' : 'var(--text-muted)' }}>
