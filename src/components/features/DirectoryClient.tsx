@@ -90,28 +90,27 @@ export function DirectoryClient({ students, currentUserId, likedIds: initialLike
   async function likeProfile(studentId: string) {
     if (!currentUserId) { toast.error('Sign in to like profiles.'); return }
     const alreadyLiked = likedIds.includes(studentId)
+    const currentCount = students_.find(s => s.id === studentId)?.likes_count ?? 0
 
     if (alreadyLiked) {
-      // Unlike
       await supabase.from('profile_likes').delete()
         .eq('liker_id', currentUserId)
         .eq('liked_student_id', studentId)
-      await supabase.from('students').update({ likes_count: Math.max((selected?.likes_count ?? 1) - 1, 0) }).eq('id', studentId)
+      await supabase.from('students').update({ likes_count: Math.max(currentCount - 1, 0) }).eq('id', studentId)
       setLikedIds(ids => ids.filter(id => id !== studentId))
-      setStudents(ss => ss.map(s => s.id === studentId ? { ...s, likes_count: Math.max((s.likes_count ?? 1) - 1, 0) } : s))
-      setSelected(s => s ? { ...s, likes_count: Math.max((s.likes_count ?? 1) - 1, 0) } : s)
+      setStudents(ss => ss.map(s => s.id === studentId ? { ...s, likes_count: Math.max(currentCount - 1, 0) } : s))
+      setSelected(s => s ? { ...s, likes_count: Math.max(currentCount - 1, 0) } : s)
       toast.success('💔 Unliked')
     } else {
-      // Like
       const { error } = await supabase.from('profile_likes').insert({
         liker_id: currentUserId,
         liked_student_id: studentId,
       })
       if (!error) {
-        await supabase.from('students').update({ likes_count: (selected?.likes_count ?? 0) + 1 }).eq('id', studentId)
+        await supabase.from('students').update({ likes_count: currentCount + 1 }).eq('id', studentId)
         setLikedIds(ids => [...ids, studentId])
-        setStudents(ss => ss.map(s => s.id === studentId ? { ...s, likes_count: (s.likes_count ?? 0) + 1 } : s))
-        setSelected(s => s ? { ...s, likes_count: (s.likes_count ?? 0) + 1 } : s)
+        setStudents(ss => ss.map(s => s.id === studentId ? { ...s, likes_count: currentCount + 1 } : s))
+        setSelected(s => s ? { ...s, likes_count: currentCount + 1 } : s)
         toast.success('❤️ Liked!')
       }
     }
