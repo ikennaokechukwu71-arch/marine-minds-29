@@ -7,17 +7,14 @@ export default async function PollsPage() {
 
   const { data: polls } = await supabase
     .from('polls')
-    .select(`
-      *,
-      poll_options (*)
-    `)
+    .select(`*, poll_options (*)`)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
-  const { data: userVotes } = await supabase
+  const { data: userVotes } = user ? await supabase
     .from('poll_votes')
     .select('poll_id, option_id')
-    .eq('user_id', user?.id ?? '')
+    .eq('user_id', user.id) : { data: [] }
 
   return (
     <PollsClient
