@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
@@ -54,7 +53,7 @@ export function GalleryClient({ uploads, userId }: Props) {
     const path = `gallery/${userId}-${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage.from('uploads').upload(path, file)
     if (uploadError) { toast.error('Upload failed.'); setUploading(false); return }
-    const { data: { publicUrl } } = supabase.storage.from('gallery').getPublicUrl(path)
+    const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(path)
     const { error } = await supabase.from('gallery_uploads').insert({
       uploaded_by: userId, image_url: publicUrl, caption, category, is_approved: false,
     })
@@ -64,7 +63,7 @@ export function GalleryClient({ uploads, userId }: Props) {
   }
 
   async function likePhoto(id: string) {
-    await supabase.rpc('increment_gallery_like', { upload_id: id }).catch(() => {})
+    await supabase.rpc('increment_gallery_like', { upload_id: id })
     setItems(its => its.map(i => i.id === id ? { ...i, likes_count: i.likes_count + 1 } : i))
   }
 
@@ -76,39 +75,41 @@ export function GalleryClient({ uploads, userId }: Props) {
         <p className="section-sub">Every moment. Every laugh. Every late-night fish lab session.</p>
       </motion.div>
 
-      {/* Upload */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="glass-card p-5"
-      >
-        <p className="text-sm font-semibold text-ocean-secondary mb-4">Add a memory to the bank</p>
-        <div className="flex gap-3 flex-wrap items-end">
-          <div className="flex-1 min-w-[160px]">
-            <input
-              className="input-glass"
-              placeholder="Caption (optional)"
-              value={caption}
-              onChange={e => setCaption(e.target.value)}
-            />
+      {/* Upload — only show for logged in users */}
+      {userId && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-card p-5"
+        >
+          <p className="text-sm font-semibold text-ocean-secondary mb-4">Add a memory to the bank</p>
+          <div className="flex gap-3 flex-wrap items-end">
+            <div className="flex-1 min-w-[160px]">
+              <input
+                className="input-glass"
+                placeholder="Caption (optional)"
+                value={caption}
+                onChange={e => setCaption(e.target.value)}
+              />
+            </div>
+            <select
+              className="input-glass w-auto"
+              value={category}
+              onChange={e => setCategory(e.target.value as Category)}
+            >
+              {CATEGORIES.filter(c => c.value !== 'all').map(c => (
+                <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>
+              ))}
+            </select>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+            <button className="btn-primary" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              {uploading ? 'Uploading...' : '📸 Upload Photo'}
+            </button>
           </div>
-          <select
-            className="input-glass w-auto"
-            value={category}
-            onChange={e => setCategory(e.target.value as Category)}
-          >
-            {CATEGORIES.filter(c => c.value !== 'all').map(c => (
-              <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>
-            ))}
-          </select>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-          <button className="btn-primary" onClick={() => fileRef.current?.click()} disabled={uploading}>
-            {uploading ? 'Uploading...' : '📸 Upload Photo'}
-          </button>
-        </div>
-        <p className="text-xs text-ocean-muted mt-2">Photos are reviewed by class reps before going public.</p>
-      </motion.div>
+          <p className="text-xs text-ocean-muted mt-2">Photos are reviewed by class reps before going public.</p>
+        </motion.div>
+      )}
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
@@ -138,13 +139,10 @@ export function GalleryClient({ uploads, userId }: Props) {
               onClick={() => setLightbox(item)}
             >
               <div className="relative">
-                <Image
+                <img
                   src={item.image_url}
                   alt={item.caption ?? 'Class memory'}
-                  width={400}
-                  height={300}
                   className="w-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-105"
-                  style={{ height: 'auto' }}
                 />
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-ocean-deep/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                   {item.caption && <p className="text-sm font-medium text-white">{item.caption}</p>}
@@ -183,11 +181,9 @@ export function GalleryClient({ uploads, userId }: Props) {
                 onClick={() => setLightbox(null)}
               >✕</button>
               <div className="relative rounded-2xl overflow-hidden mb-4">
-                <Image
+                <img
                   src={lightbox.image_url}
                   alt={lightbox.caption ?? ''}
-                  width={800}
-                  height={600}
                   className="w-full h-auto rounded-2xl"
                 />
               </div>
@@ -196,9 +192,11 @@ export function GalleryClient({ uploads, userId }: Props) {
                   {lightbox.caption && <p className="font-semibold text-base">{lightbox.caption}</p>}
                   <p className="text-sm text-ocean-muted">{timeAgo(lightbox.created_at)}</p>
                 </div>
-                <button className="btn-glass text-sm" onClick={() => likePhoto(lightbox.id)}>
-                  ❤️ {lightbox.likes_count}
-                </button>
+                {userId && (
+                  <button className="btn-glass text-sm" onClick={() => likePhoto(lightbox.id)}>
+                    ❤️ {lightbox.likes_count}
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>
