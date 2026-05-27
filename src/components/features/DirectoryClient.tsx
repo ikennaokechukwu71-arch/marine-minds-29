@@ -12,9 +12,10 @@ import type { Student } from '@/types/database'
 interface Props {
   students: Student[]
   currentUserId: string
+  likedIds: string[]
 }
 
-export function DirectoryClient({ students, currentUserId }: Props) {
+export function DirectoryClient({ students, currentUserId, likedIds: initialLikedIds }: Props) {
   const supabase = createClient() as any
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Student | null>(null)
@@ -23,9 +24,11 @@ export function DirectoryClient({ students, currentUserId }: Props) {
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [likedIds, setLikedIds] = useState<string[]>(initialLikedIds)
+  const [students_, setStudents] = useState(students)
   const avatarRef = useRef<HTMLInputElement>(null)
 
-  const filtered = students.filter(s =>
+  const filtered = students_.filter(s =>
     s.full_name.toLowerCase().includes(query.toLowerCase()) ||
     (s.nickname ?? '').toLowerCase().includes(query.toLowerCase())
   )
@@ -79,25 +82,45 @@ export function DirectoryClient({ students, currentUserId }: Props) {
       toast.success('Profile updated! 🌊')
       setEditing(false)
       setSelected(s => s ? { ...s, ...editForm } : s)
-      // Refresh page to update name in nav
       if (editForm.full_name !== selected?.full_name) window.location.reload()
     }
     setSaving(false)
   }
 
   async function likeProfile(studentId: string) {
-    const { error } = await supabase.from('profile_likes').insert({
-      liker_id: currentUserId,
-      liked_student_id: studentId,
-    })
-    if (!error) toast.success('❤️ Liked!')
+    if (!currentUserId) { toast.error('Sign in to like profiles.'); return }
+    const alreadyLiked = likedIds.includes(studentId)
+
+    if (alreadyLiked) {
+      // Unlike
+      await supabase.from('profile_likes').delete()
+        .eq('liker_id', currentUserId)
+        .eq('liked_student_id', studentId)
+      await supabase.from('students').update({ likes_count: Math.max((selected?.likes_count ?? 1) - 1, 0) }).eq('id', studentId)
+      setLikedIds(ids => ids.filter(id => id !== studentId))
+      setStudents(ss => ss.map(s => s.id === studentId ? { ...s, likes_count: Math.max((s.likes_count ?? 1) - 1, 0) } : s))
+      setSelected(s => s ? { ...s, likes_count: Math.max((s.likes_count ?? 1) - 1, 0) } : s)
+      toast.success('💔 Unliked')
+    } else {
+      // Like
+      const { error } = await supabase.from('profile_likes').insert({
+        liker_id: currentUserId,
+        liked_student_id: studentId,
+      })
+      if (!error) {
+        await supabase.from('students').update({ likes_count: (selected?.likes_count ?? 0) + 1 }).eq('id', studentId)
+        setLikedIds(ids => [...ids, studentId])
+        setStudents(ss => ss.map(s => s.id === studentId ? { ...s, likes_count: (s.likes_count ?? 0) + 1 } : s))
+        setSelected(s => s ? { ...s, likes_count: (s.likes_count ?? 0) + 1 } : s)
+        toast.success('❤️ Liked!')
+      }
+    }
   }
 
   const isOwnProfile = selected?.user_id === currentUserId
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <p className="section-eyebrow">Marine Minds 29</p>
         <h1 className="section-heading">Meet the Crew 🌊</h1>
@@ -114,7 +137,7 @@ export function DirectoryClient({ students, currentUserId }: Props) {
         </div>
       </motion.div>
 
-      <p className="text-sm text-ocean-muted">{filtered.length} of {students.length} crew members</p>
+      <p className="text-sm text-ocean-muted">{filtered.length} of {students_.length} crew members</p>
 
       {/* Portrait Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -131,7 +154,6 @@ export function DirectoryClient({ students, currentUserId }: Props) {
               style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(6,32,64,0.4)' }}
               onClick={() => openProfile(s)}
             >
-              {/* Portrait Image Area */}
               <div className="relative w-full aspect-[3/4] overflow-hidden">
                 {s.avatar_url ? (
                   <Image
@@ -146,17 +168,17 @@ export function DirectoryClient({ students, currentUserId }: Props) {
                     <span className="font-syne font-extrabold text-3xl text-ocean-deep opacity-60">{initials}</span>
                   </div>
                 )}
-                {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep via-ocean-deep/20 to-transparent" />
               </div>
-
-              {/* Name area */}
               <div className="p-3">
                 <p className="font-syne font-bold text-sm truncate">{s.full_name}</p>
                 {s.nickname
                   ? <p className="text-xs gradient-text-static truncate">{s.nickname}</p>
                   : <p className="text-xs text-ocean-muted truncate">{s.bio ?? 'No bio yet.'}</p>
                 }
+                {(s.likes_count ?? 0) > 0 && (
+                  <p className="text-xs text-pink-400 mt-1">❤️ {s.likes_count}</p>
+                )}
               </div>
             </motion.div>
           )
@@ -190,7 +212,6 @@ export function DirectoryClient({ students, currentUserId }: Props) {
 
               {!editing ? (
                 <>
-                  {/* Full portrait image */}
                   <div className="relative w-full aspect-[4/5]">
                     {selected.avatar_url ? (
                       <Image
@@ -214,7 +235,6 @@ export function DirectoryClient({ students, currentUserId }: Props) {
                     </div>
                   </div>
 
-                  {/* Details */}
                   <div className="p-6 space-y-4">
                     {selected.favorite_quote && (
                       <blockquote className="text-sm text-ocean-secondary italic border-l-2 border-cyan-400/50 pl-4 leading-relaxed">
@@ -230,8 +250,19 @@ export function DirectoryClient({ students, currentUserId }: Props) {
                       {selected.twitter_url && <a href={selected.twitter_url} target="_blank" className="btn-glass text-xs py-2 px-3">🐦 Twitter</a>}
                     </div>
                     <div className="flex gap-2 pt-1">
-                      {!isOwnProfile && (
-                        <button onClick={() => likeProfile(selected.id)} className="btn-glass flex-1 text-sm">❤️ Like</button>
+                      {!isOwnProfile && currentUserId && (
+                        <button
+                          onClick={() => likeProfile(selected.id)}
+                          className="btn-glass flex-1 text-sm"
+                          style={{ color: likedIds.includes(selected.id) ? '#ff6b9d' : undefined }}
+                        >
+                          {likedIds.includes(selected.id) ? '❤️' : '🤍'} {selected.likes_count ?? 0} {likedIds.includes(selected.id) ? 'Liked' : 'Like'}
+                        </button>
+                      )}
+                      {!isOwnProfile && !currentUserId && (
+                        <div className="text-xs text-ocean-muted text-center flex-1 py-2">
+                          ❤️ {selected.likes_count ?? 0} likes
+                        </div>
                       )}
                       {isOwnProfile && (
                         <button onClick={() => setEditing(true)} className="btn-primary flex-1 text-sm">✏️ Edit My Profile</button>
@@ -242,8 +273,6 @@ export function DirectoryClient({ students, currentUserId }: Props) {
               ) : (
                 <div className="p-8">
                   <h2 className="font-syne text-xl font-bold text-center mb-5">Edit Your Profile</h2>
-
-                  {/* Avatar Upload */}
                   <div className="flex flex-col items-center mb-6">
                     <div className="relative group cursor-pointer rounded-2xl overflow-hidden w-32 h-32" onClick={() => avatarRef.current?.click()}>
                       {(avatarPreview ?? selected.avatar_url) ? (
@@ -266,7 +295,6 @@ export function DirectoryClient({ students, currentUserId }: Props) {
                     <p className="text-xs text-ocean-muted mt-2">Click to change · Max 2MB</p>
                     <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                   </div>
-
                   <div className="space-y-3">
                     {[
                       { label: 'Full Name', key: 'full_name', placeholder: 'Your full name' },
