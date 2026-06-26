@@ -18,18 +18,20 @@
 
 @layer base {
   :root {
-    --ocean-deep:    #020b18;
-    --ocean-mid:     #041830;
-    --ocean-surface: #062040;
-    --cyan:          #00d4ff;
-    --aqua:          #00ffcc;
-    --teal:          #0af5c8;
-    --glass:         rgba(255, 255, 255, 0.06);
-    --glass-hover:   rgba(255, 255, 255, 0.10);
-    --glass-border:  rgba(255, 255, 255, 0.12);
-    --text-primary:  #f0f8ff;
-    --text-secondary:#8ab4cc;
-    --text-muted:    #4a7a99;
+    /* Mercury palette mapped onto existing variable names */
+    --ocean-deep:    #171721; /* Abyss — outermost bg */
+    --ocean-mid:     #1e1e2a; /* Surface — section bg */
+    --ocean-surface: #272735; /* Interactive — hover/contained surfaces */
+    --cyan:          #5266eb; /* Mercury Blue — sole accent */
+    --aqua:          #5266eb;
+    --teal:          #5266eb;
+    --glass:         rgba(255, 255, 255, 0.03);
+    --glass-hover:   rgba(255, 255, 255, 0.06);
+    --glass-border:  #70707d33; /* Lead, low opacity */
+    --text-primary:  #ededf3; /* Starlight */
+    --text-secondary:#c3c3cc; /* Silver */
+    --text-muted:    #70707d; /* Lead */
+    --ghost-blue:    #cdddff;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,143 +46,139 @@
     background: var(--ocean-deep);
     color: var(--text-primary);
     font-family: 'NeueMontreal', sans-serif;
+    font-weight: 360;
+    letter-spacing: 0.01em;
     min-height: 100vh;
     overflow-x: hidden;
   }
 
   ::selection {
-    background: rgba(0, 212, 255, 0.3);
+    background: rgba(82, 102, 235, 0.3);
     color: #fff;
   }
 
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: var(--ocean-deep); }
-  ::-webkit-scrollbar-thumb { background: rgba(0, 212, 255, 0.3); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(0, 212, 255, 0.5); }
+  ::-webkit-scrollbar-thumb { background: rgba(82, 102, 235, 0.3); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(82, 102, 235, 0.5); }
 }
 
 @layer components {
-  /* ─── Glassmorphism ─────────────────────────────────── */
+  /* ─── Cards — flat, no radius, no shadow, color-shift only ─── */
   .glass-card {
-    @apply backdrop-blur-glass;
-    background: var(--glass);
+    background: var(--ocean-mid);
     border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    transition: all 0.3s ease;
+    border-radius: 4px;
+    transition: border-color 0.25s ease, background 0.25s ease;
     position: relative;
     overflow: hidden;
   }
-  .glass-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 20px;
-    background: linear-gradient(135deg, rgba(0,212,255,0.03), rgba(0,255,204,0.03));
-    pointer-events: none;
-  }
+  .glass-card::before { content: none; }
   .glass-card:hover {
-    border-color: rgba(0, 212, 255, 0.3);
-    box-shadow: 0 0 30px rgba(0, 212, 255, 0.08);
-    transform: translateY(-3px);
+    border-color: rgba(82, 102, 235, 0.35);
+    background: var(--ocean-surface);
+    box-shadow: none;
+    transform: none;
   }
 
-  /* ─── Gradient Text ─────────────────────────────────── */
+  /* ─── Gradient text → flat Starlight, no gradient/animation ─── */
   .gradient-text {
-    background: linear-gradient(135deg, #fff 0%, var(--cyan) 40%, var(--aqua) 80%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    background-size: 200% 200%;
-    animation: gradientShift 4s ease infinite;
+    color: var(--text-primary);
+    font-weight: 360;
+    background: none;
+    -webkit-text-fill-color: var(--text-primary);
+    animation: none;
   }
   .gradient-text-static {
-    background: linear-gradient(135deg, var(--cyan), var(--aqua));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--cyan);
+    background: none;
+    -webkit-text-fill-color: var(--cyan);
   }
 
-  /* ─── Buttons ───────────────────────────────────────── */
+  /* ─── Buttons — pill, single accent ─────────────────────── */
   .btn-primary {
-    @apply font-semibold text-sm cursor-pointer transition-all duration-300;
-    padding: 12px 24px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--cyan), var(--aqua));
-    color: var(--ocean-deep);
+    @apply font-medium text-sm cursor-pointer transition-all duration-200;
+    padding: 16px 24px;
+    border-radius: 32px;
+    background: var(--cyan);
+    color: #ffffff;
     border: none;
     position: relative;
     overflow: hidden;
     font-family: 'NeueMontreal', sans-serif;
+    font-weight: 480;
   }
   .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(0, 212, 255, 0.4);
+    background: #4456d6;
+    transform: none;
+    box-shadow: none;
   }
-  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:active { transform: scale(0.98); }
 
   .btn-glass {
-    @apply font-medium text-sm cursor-pointer transition-all duration-300;
-    padding: 12px 24px;
-    border-radius: 12px;
-    background: var(--glass);
+    @apply font-medium text-sm cursor-pointer transition-all duration-200;
+    padding: 8px 20px;
+    border-radius: 40px;
+    background: rgba(205, 221, 255, 0.08);
     border: 1px solid var(--glass-border);
     color: var(--text-primary);
-    backdrop-filter: blur(20px);
+    backdrop-filter: none;
     font-family: 'NeueMontreal', sans-serif;
+    font-weight: 420;
   }
   .btn-glass:hover {
-    background: var(--glass-hover);
-    transform: translateY(-2px);
-    border-color: rgba(0, 212, 255, 0.3);
+    background: rgba(205, 221, 255, 0.14);
+    transform: none;
+    border-color: rgba(82, 102, 235, 0.4);
   }
 
   .btn-danger {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(255, 70, 70, 0.15);
-    color: #ff6b6b;
+    padding: 8px 18px;
+    border-radius: 40px;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: #e08080;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
     font-family: 'NeueMontreal', sans-serif;
   }
-  .btn-danger:hover { background: rgba(255,70,70,0.25); }
+  .btn-danger:hover { background: rgba(224,128,128,0.08); border-color: rgba(224,128,128,0.4); }
 
   .btn-success {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: none;
-    background: rgba(0, 255, 136, 0.15);
-    color: #00ff88;
+    padding: 8px 18px;
+    border-radius: 40px;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: #7fd6a8;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
     font-family: 'NeueMontreal', sans-serif;
   }
-  .btn-success:hover { background: rgba(0,255,136,0.25); }
+  .btn-success:hover { background: rgba(127,214,168,0.08); border-color: rgba(127,214,168,0.4); }
 
-  /* ─── Inputs ────────────────────────────────────────── */
+  /* ─── Inputs — pill, transparent, thin border ──────────── */
   .input-glass {
     width: 100%;
-    padding: 12px 20px;
-    background: rgba(255,255,255,0.03);
+    padding: 14px 22px;
+    background: transparent;
     border: 1px solid var(--glass-border);
-    border-radius: 12px;
+    border-radius: 32px;
     color: var(--text-primary);
     font-size: 14px;
     font-family: 'NeueMontreal', sans-serif;
     outline: none;
     transition: border-color 0.2s;
-    backdrop-filter: blur(10px);
+    backdrop-filter: none;
   }
-  .input-glass:focus { border-color: rgba(0, 212, 255, 0.4); }
+  .input-glass:focus { border-color: var(--cyan); }
   .input-glass::placeholder { color: var(--text-muted); }
 
-  /* ─── Section Headings ──────────────────────────────── */
+  /* ─── Section headings — light weight, airy ────────────── */
   .section-eyebrow {
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 480;
     color: var(--cyan);
     text-transform: uppercase;
     letter-spacing: 3px;
@@ -189,43 +187,44 @@
   }
   .section-heading {
     font-size: clamp(28px, 4vw, 42px);
-    font-weight: 800;
-    line-height: 1.1;
+    font-weight: 360;
+    line-height: 1.15;
     margin-bottom: 8px;
     font-family: 'NeueMontreal', sans-serif;
+    letter-spacing: 0.01em;
   }
   .section-sub {
     font-size: 16px;
+    font-weight: 400;
     color: var(--text-secondary);
     line-height: 1.6;
     max-width: 480px;
-    font-family: 'NeueMontreal', sans-serif;
   }
 
-  /* ─── Online Dot ────────────────────────────────────── */
+  /* ─── Online dot ────────────────────────────────────────── */
   .online-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: #00ff88;
-    box-shadow: 0 0 8px #00ff88;
+    background: #7fd6a8;
+    box-shadow: none;
     animation: pulse 2s infinite;
   }
 
-  /* ─── Nav Glassmorphism ─────────────────────────────── */
+  /* ─── Nav — minimal translucent bar ─────────────────────── */
   .nav-glass {
-    background: rgba(2, 11, 24, 0.7);
-    backdrop-filter: blur(20px);
+    background: rgba(23, 23, 33, 0.85);
+    backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--glass-border);
   }
 
-  /* ─── Reaction Button ───────────────────────────────── */
+  /* ─── Reaction button ───────────────────────────────────── */
   .reaction-btn {
-    padding: 4px 10px;
-    border-radius: 100px;
-    border: 1px solid transparent;
-    background: rgba(255,255,255,0.05);
-    color: var(--text-primary);
+    padding: 4px 12px;
+    border-radius: 40px;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: var(--text-secondary);
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
@@ -234,40 +233,43 @@
     gap: 4px;
     font-family: 'NeueMontreal', sans-serif;
   }
-  .reaction-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.05); }
+  .reaction-btn:hover { background: rgba(255,255,255,0.04); }
   .reaction-btn.active {
-    background: rgba(0,212,255,0.15);
-    border-color: rgba(0,212,255,0.3);
+    background: rgba(82,102,235,0.12);
+    border-color: rgba(82,102,235,0.4);
+    color: var(--text-primary);
   }
 
-  /* ─── Badge ─────────────────────────────────────────── */
+  /* ─── Badge ─────────────────────────────────────────────── */
   .badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    border-radius: 100px;
+    border-radius: 40px;
     padding: 4px 12px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 480;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-family: 'NeueMontreal', sans-serif;
+    border: 1px solid var(--glass-border);
   }
 
-  /* ─── Ocean Glow ─────────────────────────────────────── */
+  /* ─── Ocean glow → subtle, desaturated ──────────────────── */
   .ocean-glow-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.12;
-    animation: floatGlow 8s ease-in-out infinite;
+    filter: blur(90px);
+    opacity: 0.10;
+    background: var(--cyan);
+    animation: floatGlow 10s ease-in-out infinite;
     pointer-events: none;
   }
 }
 
 @layer utilities {
-  .font-syne { font-family: 'NeueMontreal', sans-serif; }
-  .font-dm   { font-family: 'NeueMontreal', sans-serif; }
+  .font-syne { font-family: 'NeueMontreal', sans-serif; font-weight: 360; }
+  .font-dm   { font-family: 'NeueMontreal', sans-serif; font-weight: 400; }
 
   .text-ocean-muted     { color: var(--text-muted); }
   .text-ocean-secondary { color: var(--text-secondary); }
@@ -277,24 +279,26 @@
 
 /* ─── Keyframes ─────────────────────────────────────────── */
 @keyframes gradientShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0%, 100% { background-position: 0% 50%; }
 }
 
 @keyframes floatGlow {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50%       { transform: translate(20px, -30px) scale(1.1); }
+  50%       { transform: translate(16px, -24px) scale(1.06); }
 }
 
 @keyframes bubbleRise {
   0%   { transform: translateY(100vh) scale(0); opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 0.5; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.3; }
   100% { transform: translateY(-20px) scale(1); opacity: 0; }
 }
 
-/* ─── Framer Motion Defaults ────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 .motion-safe * {
   will-change: transform, opacity;
 }
